@@ -26,15 +26,6 @@
       </text>
     </g>
   {/each}
-
-  <text
-    class="axis-title"
-    x={xScale(50)}
-    y={top - 47}
-    text-anchor="middle"
-  >
-    Percentage of respondents
-  </text>
 </g>
 
 <style>

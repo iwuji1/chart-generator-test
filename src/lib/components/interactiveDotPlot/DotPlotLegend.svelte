@@ -6,7 +6,8 @@
     hoveredCohort = null,
     onSelect,
     onPreview,
-    onClearPreview
+    onClearPreview,
+    vertical = false
   } = $props();
 
   const activeCohort = $derived(
@@ -14,7 +15,10 @@
   );
 
   function handleKeydown(event, cohort) {
-    if (event.key === 'Enter' || event.key === ' ') {
+    if (
+      event.key === 'Enter' ||
+      event.key === ' '
+    ) {
       event.preventDefault();
       onSelect(cohort);
     }
@@ -23,6 +27,7 @@
 
 <div
   class="legend"
+  class:vertical
   role="group"
   aria-label="Select a leadership cohort"
 >
@@ -34,12 +39,17 @@
         activeCohort &&
         activeCohort !== cohort
       }
-      aria-pressed={selectedCohort === cohort}
-      onmouseenter={() => onPreview(cohort)}
+      aria-pressed={
+        selectedCohort === cohort
+      }
+      onmouseenter={() =>
+        onPreview(cohort)}
       onmouseleave={onClearPreview}
-      onfocus={() => onPreview(cohort)}
+      onfocus={() =>
+        onPreview(cohort)}
       onblur={onClearPreview}
-      onclick={() => onSelect(cohort)}
+      onclick={() =>
+        onSelect(cohort)}
       onkeydown={(event) =>
         handleKeydown(event, cohort)}
     >
@@ -60,18 +70,33 @@
     gap: 0.45rem;
   }
 
+  .legend.vertical {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .legend.vertical button {
+    justify-content: flex-start;
+    width: 100%;
+    text-align: left;
+  }
+
   button {
     display: inline-flex;
     gap: 0.45rem;
     align-items: center;
+
     border: 1px solid transparent;
     border-radius: 999px;
     padding: 0.48rem 0.72rem;
+
     background: transparent;
     color: #272c2a;
+
     font: inherit;
-    font-size: 0.84rem;
+    font-size: 0.8rem;
     cursor: pointer;
+
     transition:
       opacity 150ms ease,
       background 150ms ease,
@@ -94,8 +119,10 @@
     width: 0.72rem;
     height: 0.72rem;
     flex: 0 0 auto;
+
     border-radius: 50%;
     background: #929b98;
+
     transition:
       transform 150ms ease,
       background 150ms ease;

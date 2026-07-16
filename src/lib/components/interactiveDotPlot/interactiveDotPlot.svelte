@@ -1,6 +1,10 @@
 <script>
   import * as d3 from 'd3';
   import { fade, draw } from 'svelte/transition';
+  import { onMount, tick } from 'svelte';
+
+  import gsap from 'gsap';
+  import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
   import DotPlotAxis from '$lib/components/interactiveDotPlot/DotPlotAxis.svelte';
   import DotPlotLegend from '$lib/components/interactiveDotPlot/DotPlotLegend.svelte';
@@ -13,22 +17,20 @@
     years
   } from '$lib/datasets/dotplotdata';
 
-  /*
-   * You can pass alternative data into the component:
-   *
-   * <InteractiveDotPlot sourceData={anotherDataset} />
-   */
   let {
     sourceData = SourceData,
     initialYear = 2026
   } = $props();
 
+  /*
+   * Data
+   */
   const longData = $derived(
     createLongData(sourceData)
   );
 
   /*
-   * Main interaction state
+   * Interaction state
    */
   let selectedYear = $state(initialYear);
   let selectedCohort = $state(null);
@@ -39,14 +41,31 @@
   let tooltipY = $state(0);
 
   /*
-   * A hovered cohort temporarily overrides a clicked cohort.
+   * DOM references
+   */
+  let chartSection;
+  let sidebarPanel;
+
+  /*
+   * Chart width
+   */
+  let containerWidth = $state(1000);
+
+  const minimumSvgWidth = 820;
+
+  const width = $derived(
+    Math.max(minimumSvgWidth, containerWidth)
+  );
+
+  /*
+   * A hover preview temporarily overrides a clicked selection.
    */
   const activeCohort = $derived(
     hoveredCohort ?? selectedCohort
   );
 
   /*
-   * Main dot plot only shows one year at a time.
+   * Only one year is displayed in the main chart.
    */
   const currentYearData = $derived(
     longData.filter(
@@ -55,17 +74,18 @@
   );
 
   /*
-   * Preserve the order of SourceData.
+   * Stable row keys preserve source order.
    */
   const rowKeys = $derived(
     sourceData.map((row, rowIndex) =>
-      createRowKey(row.topic, row.response, rowIndex)
+      createRowKey(
+        row.topic,
+        row.response,
+        rowIndex
+      )
     )
   );
 
-  /*
-   * Group current-year points into chart rows.
-   */
   const rowGroups = $derived(
     d3.group(
       currentYearData,
@@ -79,14 +99,17 @@
   );
 
   /*
-   * Group SourceData by topic for topic bands and headings.
+   * Group consecutive rows by topic.
    */
   const topicGroups = $derived.by(() => {
     const groups = [];
     let currentGroup = null;
 
     sourceData.forEach((row, rowIndex) => {
-      if (!currentGroup || currentGroup.topic !== row.topic) {
+      if (
+        !currentGroup ||
+        currentGroup.topic !== row.topic
+      ) {
         currentGroup = {
           topic: row.topic,
           startIndex: rowIndex,
@@ -105,35 +128,27 @@
   });
 
   /*
-   * Dimensions
+   * Layout
    */
-  let containerWidth = $state(1100);
-
-  const width = $derived(
-    Math.max(820, containerWidth)
-  );
-
-  const rowHeight = 70;
-  const topicGap = 40;
+  const rowHeight = 42;
+  const topicGap = 34;
+  const topicHeadingHeight = 38;
 
   const margin = {
-    top: 150,
-    right: 65,
+    top: 120,
+    right: 55,
     bottom: 70,
-    left: 365
+    left: 330
   };
 
-  /*
-   * Add an extra gap after every topic except the last.
-   */
   function getTopicGapBefore(rowIndex) {
-    return topicGroups
-      .filter(
+    return (
+      topicGroups.filter(
         (group) =>
           group.startIndex > 0 &&
           group.startIndex <= rowIndex
-      )
-      .length * topicGap;
+      ).length * topicGap
+    );
   }
 
   function getRowY(rowIndex) {
@@ -146,7 +161,8 @@
 
   const plotBottom = $derived(
     sourceData.length > 0
-      ? getRowY(sourceData.length - 1) + rowHeight / 2
+      ? getRowY(sourceData.length - 1) +
+          rowHeight / 2
       : margin.top
   );
 
@@ -155,13 +171,16 @@
   );
 
   /*
-   * Scales
+   * D3 scales
    */
   const xScale = $derived(
     d3
       .scaleLinear()
       .domain([0, 100])
-      .range([margin.left, width - margin.right])
+      .range([
+        margin.left,
+        width - margin.right
+      ])
   );
 
   const colourScale = d3
@@ -177,7 +196,7 @@
     ]);
 
   /*
-   * All current-year points for the highlighted cohort.
+   * Selected cohort line
    */
   const activeSeries = $derived(
     activeCohort
@@ -187,20 +206,20 @@
               point.cohort === activeCohort
           )
           .sort(
-            (a, b) => a.rowIndex - b.rowIndex
+            (a, b) =>
+              a.rowIndex - b.rowIndex
           )
       : []
   );
 
-  /*
-   * D3 creates the line path while Svelte renders it.
-   */
   const lineGenerator = $derived(
     d3
       .line()
       .x((point) => xScale(point.value))
       .y((point) => getRowY(point.rowIndex))
-      .curve(d3.curveCatmullRom.alpha(0.5))
+      .curve(
+        d3.curveCatmullRom.alpha(0.5)
+      )
   );
 
   const activeLinePath = $derived(
@@ -210,7 +229,7 @@
   );
 
   /*
-   * Historical values displayed in the tooltip.
+   * Tooltip history
    */
   const tooltipHistory = $derived.by(() => {
     if (!hoveredPoint) {
@@ -227,7 +246,11 @@
       .sort((a, b) => a.year - b.year);
   });
 
-  function createRowKey(topic, response, rowIndex) {
+  function createRowKey(
+    topic,
+    response,
+    rowIndex
+  ) {
     return `${rowIndex}|||${topic}|||${response}`;
   }
 
@@ -275,7 +298,10 @@
   }
 
   function handleDotKeydown(event, point) {
-    if (event.key === 'Enter' || event.key === ' ') {
+    if (
+      event.key === 'Enter' ||
+      event.key === ' '
+    ) {
       event.preventDefault();
       selectCohort(point.cohort);
     }
@@ -302,15 +328,21 @@
 
     return cohort === activeCohort
       ? 1
-      : 0.3;
+      : 0.28;
   }
 
   function getDotRadius(cohort) {
-    return cohort === activeCohort ? 8 : 5.5;
+    return cohort === activeCohort
+      ? 8
+      : 5.5;
   }
 
   function getTopicBandY(group) {
-    return getRowY(group.startIndex) - rowHeight / 2 - 25;
+    return (
+      getRowY(group.startIndex) -
+      rowHeight / 2 -
+      22
+    );
   }
 
   function getTopicBandHeight(group) {
@@ -318,7 +350,7 @@
       getRowY(group.endIndex) -
       getRowY(group.startIndex) +
       rowHeight +
-      10
+      12
     );
   }
 
@@ -331,226 +363,357 @@
       ? xScale(value) - 13
       : xScale(value) + 13;
   }
+
+  /*
+   * GSAP sidebar pinning
+   */
+  onMount(() => {
+    gsap.registerPlugin(ScrollTrigger);
+
+    const mediaQuery = gsap.matchMedia();
+
+    mediaQuery.add(
+      '(min-width: 901px)',
+      async () => {
+        await tick();
+
+        const topOffset = 24;
+
+        const trigger = ScrollTrigger.create({
+          trigger: chartSection,
+          pin: sidebarPanel,
+
+          start: `top top+=${topOffset}`,
+
+          /*
+           * Release when the sidebar bottom reaches
+           * the chart section bottom.
+           */
+          end: () =>
+            `bottom top+=${
+              sidebarPanel.offsetHeight +
+              topOffset
+            }`,
+
+          pinSpacing: false,
+          invalidateOnRefresh: true,
+          anticipatePin: 1
+
+          // Use temporarily when debugging:
+          // markers: true
+        });
+
+        const resizeObserver =
+          new ResizeObserver(() => {
+            ScrollTrigger.refresh();
+          });
+
+        resizeObserver.observe(chartSection);
+        resizeObserver.observe(sidebarPanel);
+
+        requestAnimationFrame(() => {
+          ScrollTrigger.refresh();
+        });
+
+        return () => {
+          resizeObserver.disconnect();
+          trigger.kill();
+        };
+      }
+    );
+
+    return () => {
+      mediaQuery.revert();
+    };
+  });
 </script>
 
-<section class="dot-plot">
-  <div class="chart-header">
-    <div>
-      <h2>Employee priorities by leadership cohort</h2>
-
-      <p>
-        Select a cohort to follow its responses across all
-        topics. Hover over a point to compare that response
-        across years.
-      </p>
-    </div>
-
+<section
+  class="dot-plot"
+  bind:this={chartSection}
+>
+  <aside class="chart-sidebar">
     <div
-      class="year-selector"
-      role="group"
-      aria-label="Select chart year"
+      class="sidebar-panel"
+      bind:this={sidebarPanel}
     >
-      {#each years as year}
+      <div class="chart-heading">
+        <h2>
+          Employee priorities by leadership cohort
+        </h2>
+
+        <p>
+          Select a cohort to follow its responses
+          across all topics. Hover over a point to
+          compare that response across years.
+        </p>
+      </div>
+
+      <div class="year-control">
+        <p class="control-label">
+          View year
+        </p>
+
+        <div
+          class="year-selector"
+          role="group"
+          aria-label="Select chart year"
+        >
+          {#each years as year}
+            <button
+              type="button"
+              class:active={
+                selectedYear === year
+              }
+              aria-pressed={
+                selectedYear === year
+              }
+              onclick={() =>
+                selectYear(year)}
+            >
+              {year}
+            </button>
+          {/each}
+        </div>
+      </div>
+
+      <div class="legend-control">
+        <p class="control-label">
+          Highlight cohort
+        </p>
+
+        <DotPlotLegend
+          {cohorts}
+          {colourScale}
+          {selectedCohort}
+          {hoveredCohort}
+          onSelect={selectCohort}
+          onPreview={previewCohort}
+          onClearPreview={clearPreview}
+          vertical={true}
+        />
+      </div>
+
+      {#if selectedCohort}
         <button
           type="button"
-          class:active={selectedYear === year}
-          aria-pressed={selectedYear === year}
-          onclick={() => selectYear(year)}
+          class="clear-button"
+          onclick={clearSelection}
         >
-          {year}
+          Clear {selectedCohort}
         </button>
-      {/each}
+      {/if}
     </div>
-  </div>
+  </aside>
 
-  <DotPlotLegend
-    {cohorts}
-    {colourScale}
-    {selectedCohort}
-    {hoveredCohort}
-    onSelect={selectCohort}
-    onPreview={previewCohort}
-    onClearPreview={clearPreview}
-  />
-
-  <div
-    class="chart-wrapper"
-    bind:clientWidth={containerWidth}
-  >
-    <svg
-      {width}
-      {height}
-      viewBox={`0 0 ${width} ${height}`}
-      role="img"
-      aria-labelledby="dot-plot-title dot-plot-description"
-      onclick={(event) => {
-        if (event.target === event.currentTarget) {
-          clearSelection();
-        }
-      }}
+  <div class="chart-content">
+    <div
+      class="chart-wrapper"
+      bind:clientWidth={containerWidth}
     >
-      <title id="dot-plot-title">
-        Employee priorities by cohort in {selectedYear}
-      </title>
-
-      <desc id="dot-plot-description">
-        Each row represents a response topic. Each dot
-        represents one leadership cohort. Selecting a cohort
-        connects its responses across the chart.
-      </desc>
-
-      <!-- Topic background bands -->
-      <g class="topic-bands">
-        {#each topicGroups as group, i}
-          <rect
-            class:alternate={i % 2 === 1}
-            x="0"
-            y={getTopicBandY(group)}
-            width={width}
-            height={getTopicBandHeight(group)}
-          />
-
-          <text
-            class="topic-heading"
-            x={24}
-            y={getTopicBandY(group) + 26}
-          >
-            {group.topic}
-          </text>
-        {/each}
-      </g>
-
-      <DotPlotAxis
-        {xScale}
+      <svg
         {width}
-        {margin}
-        top={margin.top - 45}
-        bottom={plotBottom}
-      />
+        {height}
+        viewBox={`0 0 ${width} ${height}`}
+        role="img"
+        aria-labelledby="dot-plot-title dot-plot-description"
+      >
+        <title id="dot-plot-title">
+          Employee priorities by cohort in
+          {selectedYear}
+        </title>
 
-      <!-- Response rows -->
-      <g class="rows">
-        {#each rowKeys as rowKey, rowIndex}
-          {@const values = rowGroups.get(rowKey) ?? []}
-          {@const row = sourceData[rowIndex]}
-          {@const minimum = d3.min(values, (point) => point.value)}
-          {@const maximum = d3.max(values, (point) => point.value)}
-          {@const rowY = getRowY(rowIndex)}
+        <desc id="dot-plot-description">
+          Each row is a response topic and each
+          dot represents one leadership cohort.
+        </desc>
 
-          <g class="response-row">
-            <line
-              class="row-guide"
-              x1={margin.left}
-              x2={width - margin.right}
-              y1={rowY}
-              y2={rowY}
+        <!-- Topic backgrounds -->
+        <g class="topic-bands">
+          {#each topicGroups as group, i}
+            <rect
+              class="topic-band"
+              x="0"
+              y={getTopicBandY(group)}
+              width={width}
+              height={getTopicBandHeight(group)}
             />
 
-            {#if Number.isFinite(minimum) && Number.isFinite(maximum)}
-              <line
-                class="range-line"
-                x1={xScale(minimum)}
-                x2={xScale(maximum)}
-                y1={rowY}
-                y2={rowY}
-              />
-            {/if}
+            <rect
+                class="topic-heading-bg"
+                x="0"
+                y={getTopicBandY(group)}
+                width={margin.left}
+                height={topicHeadingHeight}
+            />
 
             <text
-              class="response-label"
-              x={margin.left - 24}
-              y={rowY}
-              dy="0.35em"
-              text-anchor="end"
+              class="topic-heading"
+              x="18"
+              y={getTopicBandY(group) + topicHeadingHeight/2}
+              dominant-baseline="middle"
             >
-              {row.response}
-            </text>
-          </g>
-        {/each}
-      </g>
-
-      <!-- Active cohort line -->
-      {#if activeLinePath && activeCohort}
-        {#key `${activeCohort}-${selectedYear}`}
-          <path
-            class="active-line"
-            d={activeLinePath}
-            stroke={colourScale(activeCohort)}
-            in:draw={{ duration: 350 }}
-            out:fade={{ duration: 100 }}
-          />
-        {/key}
-      {/if}
-
-      <!-- Dots -->
-      <g class="dots">
-        {#each currentYearData as point}
-          <circle
-            class="dot"
-            class:active-dot={point.cohort === activeCohort}
-            cx={xScale(point.value)}
-            cy={getRowY(point.rowIndex)}
-            r={getDotRadius(point.cohort)}
-            fill={getDotFill(point.cohort)}
-            opacity={getDotOpacity(point.cohort)}
-            role="button"
-            tabindex="0"
-            aria-label={`${point.cohort}: ${point.value}% — ${point.topic}, ${point.response}, ${point.year}`}
-            aria-pressed={selectedCohort === point.cohort}
-            onmouseenter={(event) =>
-              showTooltip(event, point)}
-            onmousemove={updateTooltipPosition}
-            onmouseleave={hideTooltip}
-            onfocus={(event) =>
-              showTooltip(event, point)}
-            onblur={hideTooltip}
-            onclick={(event) => {
-              event.stopPropagation();
-              selectCohort(point.cohort);
-            }}
-            onkeydown={(event) =>
-              handleDotKeydown(event, point)}
-          >
-            <title>
-              {point.cohort}: {point.value}% in {point.year}
-            </title>
-          </circle>
-        {/each}
-      </g>
-
-      <!-- Active cohort value labels -->
-      {#if activeCohort}
-        <g
-          class="active-values"
-          in:fade={{ duration: 180 }}
-          out:fade={{ duration: 100 }}
-        >
-          {#each activeSeries as point}
-            <text
-              class="value-label"
-              x={getValueLabelX(point.value)}
-              y={getRowY(point.rowIndex)}
-              dy="0.35em"
-              text-anchor={getValueLabelAnchor(point.value)}
-              fill={colourScale(activeCohort)}
-            >
-              {point.value}%
+              {group.topic}
             </text>
           {/each}
         </g>
-      {/if}
-    </svg>
-  </div>
 
-  {#if selectedCohort}
-    <button
-      type="button"
-      class="clear-button"
-      onclick={clearSelection}
-    >
-      Clear {selectedCohort}
-    </button>
-  {/if}
+        <!-- Percentage axis -->
+        <DotPlotAxis
+          {xScale}
+          {margin}
+          top={margin.top - 38}
+          bottom={plotBottom}
+        />
+
+        <!-- Response rows -->
+        <g class="rows">
+          {#each rowKeys as rowKey, rowIndex}
+            {@const values =
+              rowGroups.get(rowKey) ?? []}
+
+            {@const row =
+              sourceData[rowIndex]}
+
+            {@const minimum =
+              d3.min(
+                values,
+                (point) => point.value
+              )}
+
+            {@const maximum =
+              d3.max(
+                values,
+                (point) => point.value
+              )}
+
+            {@const rowY =
+              getRowY(rowIndex)}
+
+            <g class="response-row">
+              <line
+                class="row-guide"
+                x1={margin.left}
+                x2={width - margin.right}
+                y1={rowY}
+                y2={rowY}
+              />
+
+              {#if Number.isFinite(minimum) &&
+                Number.isFinite(maximum)}
+                <line
+                  class="range-line"
+                  x1={xScale(minimum)}
+                  x2={xScale(maximum)}
+                  y1={rowY}
+                  y2={rowY}
+                />
+              {/if}
+
+              <text
+                class="response-label"
+                x={margin.left - 20}
+                y={rowY}
+                dy="0.35em"
+                text-anchor="end"
+              >
+                {row.response}
+              </text>
+            </g>
+          {/each}
+        </g>
+
+        <!-- Connected highlighted cohort -->
+        {#if activeLinePath && activeCohort}
+          {#key `${activeCohort}-${selectedYear}`}
+            <path
+              class="active-line"
+              d={activeLinePath}
+              stroke={colourScale(
+                activeCohort
+              )}
+              in:draw={{ duration: 350 }}
+              out:fade={{ duration: 100 }}
+            />
+          {/key}
+        {/if}
+
+        <!-- Dots -->
+        <g class="dots">
+          {#each currentYearData as point}
+            <circle
+              class="dot"
+              class:active-dot={
+                point.cohort === activeCohort
+              }
+              cx={xScale(point.value)}
+              cy={getRowY(point.rowIndex)}
+              r={getDotRadius(point.cohort)}
+              fill={getDotFill(point.cohort)}
+              opacity={getDotOpacity(
+                point.cohort
+              )}
+              role="button"
+              tabindex="0"
+              aria-label={`${point.cohort}: ${point.value}% — ${point.topic}, ${point.response}`}
+              aria-pressed={
+                selectedCohort === point.cohort
+              }
+              onmouseenter={(event) =>
+                showTooltip(event, point)}
+              onmousemove={
+                updateTooltipPosition}
+              onmouseleave={hideTooltip}
+              onfocus={(event) =>
+                showTooltip(event, point)}
+              onblur={hideTooltip}
+              onclick={(event) => {
+                event.stopPropagation();
+                selectCohort(point.cohort);
+              }}
+              onkeydown={(event) =>
+                handleDotKeydown(
+                  event,
+                  point
+                )}
+            >
+              <title>
+                {point.cohort}: {point.value}%
+              </title>
+            </circle>
+          {/each}
+        </g>
+
+        <!-- Selected values -->
+        {#if activeCohort}
+          <g
+            class="active-values"
+            in:fade={{ duration: 180 }}
+            out:fade={{ duration: 100 }}
+          >
+            {#each activeSeries as point}
+              <text
+                class="value-label"
+                x={getValueLabelX(
+                  point.value
+                )}
+                y={getRowY(point.rowIndex)}
+                dy="0.35em"
+                text-anchor={getValueLabelAnchor(
+                  point.value
+                )}
+                fill={colourScale(
+                  activeCohort
+                )}
+              >
+                {point.value}%
+              </text>
+            {/each}
+          </g>
+        {/if}
+      </svg>
+    </div>
+  </div>
 
   <DotTooltip
     point={hoveredPoint}
@@ -568,61 +731,55 @@
 
 <style>
   .dot-plot {
+    display: grid;
+    grid-template-columns:
+      minmax(220px, 270px)
+      minmax(0, 1fr);
+
+    gap: clamp(1.5rem, 3vw, 3rem);
+    align-items: start;
+
     width: 100%;
+    min-width: 0;
+
     color: #171a19;
-    font-family: 'gotham', sans-serif;
+    font-family: 'gotham', Arial, sans-serif;
   }
 
-  .chart-header {
-    display: flex;
-    gap: 2rem;
-    align-items: flex-start;
-    justify-content: space-between;
-    margin-bottom: 1rem;
+  .chart-sidebar {
+    position: relative;
+    min-width: 0;
+    width: 100%;
   }
 
-  h2 {
-    margin: 0;
-    font-size: clamp(1.4rem, 2vw, 2rem);
+  .sidebar-panel {
+    display: grid;
+    gap: 1.35rem;
+
+    width: 100%;
+    max-height: calc(100vh - 3rem);
+    box-sizing: border-box;
+    overflow-y: auto;
+
+    padding: 1.2rem;
+
+    border: 1px solid #dfe3e1;
+    border-radius: 0.9rem;
+
+    background: rgb(255 255 255 / 97%);
+    box-shadow: 0 8px 30px rgb(0 0 0 / 7%);
   }
 
-  .chart-header p {
-    max-width: 720px;
-    margin: 0.5rem 0 0;
-    color: #626866;
-    line-height: 1.5;
-  }
-
-  .year-selector {
-    display: flex;
-    flex: 0 0 auto;
-    gap: 0.35rem;
-    padding: 0.25rem;
-    border: 1px solid #d5dad8;
-    border-radius: 999px;
-    background: #f3f5f4;
-  }
-
-  .year-selector button {
-    border: 0;
-    border-radius: 999px;
-    padding: 0.5rem 0.85rem;
-    background: transparent;
-    color: #525856;
-    font: inherit;
-    font-weight: 700;
-    cursor: pointer;
-  }
-
-  .year-selector button.active {
-    background: #123f37;
-    color: white;
+  .chart-content {
+    width: 100%;
+    min-width: 0;
   }
 
   .chart-wrapper {
     width: 100%;
-    margin-top: 1rem;
+    min-width: 0;
     overflow-x: auto;
+    overscroll-behavior-inline: contain;
   }
 
   svg {
@@ -633,25 +790,87 @@
     background: white;
   }
 
-  .topic-bands rect {
+  .chart-heading h2 {
+    margin: 0;
+    font-size: clamp(1.25rem, 2vw, 1.75rem);
+    line-height: 1.08;
+  }
+
+  .chart-heading p {
+    margin: 0.75rem 0 0;
+    color: #626866;
+    font-size: 0.88rem;
+    line-height: 1.45;
+  }
+
+  .control-label {
+    margin: 0 0 0.65rem;
+    color: #626866;
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .year-selector {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+  }
+
+  .year-selector button {
+    border: 1px solid #d5dad8;
+    border-radius: 999px;
+    padding: 0.45rem 0.7rem;
+
+    background: #f3f5f4;
+    color: #525856;
+
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .year-selector button.active {
+    border-color: #123f37;
+    background: #123f37;
+    color: white;
+  }
+
+  .clear-button {
+    width: 100%;
+    border: 1px solid #b9c0bd;
+    border-radius: 999px;
+    padding: 0.55rem 0.8rem;
+
+    background: white;
+    color: #252a28;
+
+    font: inherit;
+    font-size: 0.8rem;
+    cursor: pointer;
+  }
+
+  .topic-bands {
     fill: #f7f8f7;
   }
 
-  .topic-bands rect.alternate {
+  .topic-heading-bg {
     fill: #eef2f0;
   }
 
   .topic-heading {
     fill: #123f37;
-    font-size: 15px;
+    font-size: 12px;
     font-weight: 800;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.035em;
     text-transform: uppercase;
   }
 
   .response-label {
     fill: #222725;
-    font-size: 13px;
+    font-size: 11px;
     font-weight: 600;
   }
 
@@ -678,6 +897,7 @@
     cursor: pointer;
     stroke: white;
     stroke-width: 1.5;
+
     transition:
       r 170ms ease,
       fill 170ms ease,
@@ -693,29 +913,30 @@
   }
 
   .active-dot {
-    filter: drop-shadow(0 2px 3px rgb(0 0 0 / 24%));
+    filter:
+      drop-shadow(
+        0 2px 3px rgb(0 0 0 / 24%)
+      );
   }
 
   .value-label {
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 800;
     pointer-events: none;
   }
 
-  .clear-button {
-    margin-top: 0.75rem;
-    border: 1px solid #b9c0bd;
-    border-radius: 999px;
-    padding: 0.5rem 0.85rem;
-    background: white;
-    color: #252a28;
-    font: inherit;
-    cursor: pointer;
-  }
+  @media (max-width: 900px) {
+    .dot-plot {
+      grid-template-columns: 1fr;
+    }
 
-  @media (max-width: 700px) {
-    .chart-header {
-      flex-direction: column;
+    .sidebar-panel {
+      max-height: none;
+      overflow: visible;
+    }
+
+    svg {
+      min-width: 780px;
     }
   }
 </style>

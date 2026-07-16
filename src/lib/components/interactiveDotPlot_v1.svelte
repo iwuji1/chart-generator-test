@@ -1,6 +1,8 @@
 <script>
   import * as d3 from 'd3';
   import { draw, fade } from 'svelte/transition';
+  
+  
   import AxisX from '$lib/components/axisX.svelte';
   import Legend from '$lib/components/legend.svelte';
 

@@ -1,5 +1,5 @@
 <script>
-  import InteractiveDotPlot from '$lib/components/interactiveDotPlot.svelte';
+  import InteractiveDotPlot from '$lib/components/interactiveDotPlot_v1.svelte';
 
   const data = [
     {
