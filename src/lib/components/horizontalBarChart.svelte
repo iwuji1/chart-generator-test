@@ -250,12 +250,13 @@
     fill: var(--primary-text);
     font-size: 36px;
     font-weight: 700;
+    font-family: "gotham", sans-serif;
     transition: fill 220ms ease;
   }
 
   .bar {
     stroke: var(--bar-stroke);
-    stroke-width: 1px;
+    stroke-width: 0px;
     transition: stroke 220ms ease;
   }
 
@@ -263,6 +264,7 @@
     fill: #ffffff;
     font-size: 40px;
     font-weight: 600;
+    font-family: "gotham", sans-serif;
   }
 
   .percentage-symbol {
@@ -274,6 +276,7 @@
     fill: var(--primary-text);
     font-size: 29px;
     font-style: italic;
+    font-family: "gotham", sans-serif;
     paint-order: stroke;
     stroke: var(--chart-background);
     stroke-width: 2px;
@@ -307,5 +310,6 @@
   .pp-label {
     font-size: 17px;
     baseline-shift: super;
+    font-family: "gotham", sans-serif;
   }
 </style>

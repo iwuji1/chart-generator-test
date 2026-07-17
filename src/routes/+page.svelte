@@ -6,11 +6,11 @@
 </script>
 
 <svelte:head>
-  <title>Korn Ferry Chart Generator</title>
+  <title>Korn Ferry Chart Tester</title>
 </svelte:head>
 
 <main>
-  <h1>Korn Ferry Chart Generator</h1>
+  <h1>Korn Ferry Chart Tester</h1>
 
   <section class="standard-chart">
     <BarChart />

@@ -156,7 +156,7 @@
     max-height: 620px;
     border: 1px solid #d7dcda;
     border-radius: 0.65rem;
-    background: #fbf8fa;
+    background: #eef2f0;
     overflow: hidden;
   }
 

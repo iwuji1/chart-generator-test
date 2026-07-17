@@ -44,7 +44,7 @@
   let selectedSegment = $state(null);
 
   const activeGroup = $derived(
-    hoveredSegment ?? selectedSegment
+    hoveredGroup ?? selectedGroup
   );
   const activeSegment = $derived(
     hoveredSegment ?? selectedSegment
@@ -638,7 +638,7 @@ function getPointRadius(point) {
     min-width: 680px;
     height: auto;
     border: 1px solid #9da5a2;
-    background: #fbf8fa;
+    background: #eef2f0;
   }
 
   .reference-line {

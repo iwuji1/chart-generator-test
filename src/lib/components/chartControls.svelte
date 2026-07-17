@@ -139,6 +139,7 @@
   h2,
   p {
     margin: 0;
+    font-family: "gotham", sans-serif;
   }
 
   .input-heading,
@@ -152,6 +153,7 @@
     font-size: 0.8rem;
     font-weight: 700;
     color: #4b5563;
+    font-family: "gotham", sans-serif;
   }
 
   input {
@@ -169,6 +171,7 @@
     display: flex;
     align-items: center;
     gap: 0.3rem;
+    font-family: "gotham", sans-serif;
   }
 
   .average-input {
@@ -178,6 +181,7 @@
     align-items: center;
     margin-top: 0.5rem;
     font-weight: 700;
+    font-family: "gotham", sans-serif;
   }
 
   button {
@@ -190,6 +194,7 @@
     font: inherit;
     font-weight: 700;
     cursor: pointer;
+    font-family: "gotham", sans-serif;
   }
 
   p {
