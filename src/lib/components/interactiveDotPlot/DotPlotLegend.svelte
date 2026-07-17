@@ -2,7 +2,7 @@
   let {
     cohorts,
     colourScale,
-    selectedCohort = null,
+    selectedCohorts = [],
     hoveredCohort = null,
     onSelect,
     onPreview,
@@ -10,9 +10,33 @@
     vertical = false
   } = $props();
 
-  const activeCohort = $derived(
-    hoveredCohort ?? selectedCohort
-  );
+  const activeCohorts = $derived.by(() => {
+    const active = [...selectedCohorts];
+
+    if (
+      hoveredCohort &&
+      !active.includes(hoveredCohort)
+    ) {
+      active.push(hoveredCohort);
+    }
+
+    return active;
+  });
+
+  function isSelected(cohort) {
+    return selectedCohorts.includes(cohort);
+  }
+
+  function isActive(cohort) {
+    return activeCohorts.includes(cohort);
+  }
+
+  function isMuted(cohort) {
+    return (
+      activeCohorts.length > 0 &&
+      !activeCohorts.includes(cohort)
+    );
+  }
 
   function handleKeydown(event, cohort) {
     if (
@@ -29,19 +53,15 @@
   class="legend"
   class:vertical
   role="group"
-  aria-label="Select a leadership cohort"
+  aria-label="Select up to two leadership cohorts"
 >
   {#each cohorts as cohort}
     <button
       type="button"
-      class:active={activeCohort === cohort}
-      class:muted={
-        activeCohort &&
-        activeCohort !== cohort
-      }
-      aria-pressed={
-        selectedCohort === cohort
-      }
+      class:active={isActive(cohort)}
+      class:selected={isSelected(cohort)}
+      class:muted={isMuted(cohort)}
+      aria-pressed={isSelected(cohort)}
       onmouseenter={() =>
         onPreview(cohort)}
       onmouseleave={onClearPreview}
@@ -59,6 +79,12 @@
       ></span>
 
       <span>{cohort}</span>
+
+      {#if isSelected(cohort)}
+        <span class="selected-indicator">
+          ✓
+        </span>
+      {/if}
     </button>
   {/each}
 </div>
@@ -111,6 +137,12 @@
     outline: none;
   }
 
+  button.selected {
+    border-color: var(--cohort-colour);
+    background: #f2f4f3;
+    font-weight: 700;
+  }
+
   button.muted {
     opacity: 0.38;
   }
@@ -129,9 +161,17 @@
   }
 
   button.active .legend-dot,
+  button.selected .legend-dot,
   button:hover .legend-dot,
   button:focus-visible .legend-dot {
     background: var(--cohort-colour);
     transform: scale(1.25);
+  }
+
+  .selected-indicator {
+    margin-left: auto;
+    color: var(--cohort-colour);
+    font-size: 0.75rem;
+    font-weight: 900;
   }
 </style>

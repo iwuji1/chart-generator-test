@@ -33,7 +33,7 @@
    * Interaction state
    */
   let selectedYear = $state(initialYear);
-  let selectedCohort = $state(null);
+  let selectedCohorts = $state([]);
   let hoveredCohort = $state(null);
   let hoveredPoint = $state(null);
 
@@ -60,9 +60,18 @@
   /*
    * A hover preview temporarily overrides a clicked selection.
    */
-  const activeCohort = $derived(
-    hoveredCohort ?? selectedCohort
-  );
+  const activeCohorts = $derived.by(() => {
+  const active = [...selectedCohorts];
+
+  if (
+    hoveredCohort &&
+    !active.includes(hoveredCohort)
+  ) {
+    active.push(hoveredCohort);
+  }
+
+  return active;
+});
 
   /*
    * Only one year is displayed in the main chart.
@@ -196,21 +205,37 @@
     ]);
 
   /*
-   * Selected cohort line
-   */
-  const activeSeries = $derived(
-    activeCohort
-      ? currentYearData
-          .filter(
-            (point) =>
-              point.cohort === activeCohort
-          )
-          .sort(
-            (a, b) =>
-              a.rowIndex - b.rowIndex
-          )
-      : []
-  );
+ * Selected cohort lines
+ */
+const activeSeriesGroups = $derived.by(() => {
+  return activeCohorts.map((cohort) => {
+    const points = currentYearData
+      .filter(
+        (point) => point.cohort === cohort
+      )
+      .sort(
+        (a, b) =>
+          a.rowIndex - b.rowIndex
+      );
+
+    return {
+      cohort,
+      points
+    };
+  });
+});
+
+const activeLineGroups = $derived(
+  activeSeriesGroups
+    .map((series) => ({
+      ...series,
+      path:
+        series.points.length > 1
+          ? lineGenerator(series.points)
+          : null
+    }))
+    .filter((series) => series.path)
+);
 
   const lineGenerator = $derived(
     d3
@@ -255,10 +280,40 @@
   }
 
   function selectCohort(cohort) {
-    selectedCohort =
-      selectedCohort === cohort
-        ? null
-        : cohort;
+    /*
+    * Clicking an already selected cohort
+    * removes it.
+    */
+    if (selectedCohorts.includes(cohort)) {
+      selectedCohorts =
+        selectedCohorts.filter(
+          (selected) => selected !== cohort
+        );
+
+      return;
+    }
+
+    /*
+    * Add the cohort when fewer than two
+    * cohorts are selected.
+    */
+    if (selectedCohorts.length < 2) {
+      selectedCohorts = [
+        ...selectedCohorts,
+        cohort
+      ];
+
+      return;
+    }
+
+    /*
+    * When two are already selected, replace
+    * the oldest selection with the new one.
+    */
+    selectedCohorts = [
+      selectedCohorts[1],
+      cohort
+    ];
   }
 
   function previewCohort(cohort) {
@@ -270,7 +325,7 @@
   }
 
   function clearSelection() {
-    selectedCohort = null;
+    selectedCohorts = [];
     hoveredCohort = null;
     hoveredPoint = null;
   }
@@ -311,28 +366,32 @@
     }
   }
 
+  function isActiveCohort(cohort) {
+    return activeCohorts.includes(cohort);
+  }
+
   function getDotFill(cohort) {
-    if (!activeCohort) {
+    if (!activeCohorts.length === 0) {
       return '#8C9593';
     }
 
-    return cohort === activeCohort
-      ? colourScale(cohort)
-      : '#CCD2D0';
+    return isActiveCohort(cohort)
+    ? colourScale(cohort)
+    : '#CCD2D0';
   }
 
   function getDotOpacity(cohort) {
-    if (!activeCohort) {
+    if (activeCohorts.length === 0) {
       return 1;
     }
 
-    return cohort === activeCohort
+    return isActiveCohort(cohort)
       ? 1
-      : 0.28;
+      : 0.2;
   }
 
   function getDotRadius(cohort) {
-    return cohort === activeCohort
+    return isActiveCohort(cohort)
       ? 8
       : 5.5;
   }
@@ -362,6 +421,49 @@
     return value >= 90
       ? xScale(value) - 13
       : xScale(value) + 13;
+  }
+
+  function removeSelectedCohort(cohort) {
+    selectedCohorts =
+      selectedCohorts.filter(
+        (selected) => selected !== cohort
+      );
+  }
+
+  function getCohortSelectionIndex(cohort) {
+    return activeCohorts.indexOf(cohort);
+  }
+
+  function getComparisonLabelX(point, cohort) {
+    const baseX = getValueLabelX(point.value);
+    const index =
+      getCohortSelectionIndex(cohort);
+
+    /*
+    * Slightly separate the two labels
+    * horizontally.
+    */
+    return index === 1
+      ? baseX + 4
+      : baseX;
+  }
+
+  function getComparisonLabelY(point, cohort) {
+    const baseY = getRowY(point.rowIndex);
+    const index =
+      getCohortSelectionIndex(cohort);
+
+    /*
+    * Place the first label slightly above
+    * and the second slightly below the row.
+    */
+    if (activeCohorts.length < 2) {
+      return baseY;
+    }
+
+    return index === 0
+      ? baseY - 10
+      : baseY + 10;
   }
 
   /*
@@ -479,13 +581,13 @@
 
       <div class="legend-control">
         <p class="control-label">
-          Highlight cohort
+          Compare up to two cohorts
         </p>
 
         <DotPlotLegend
           {cohorts}
           {colourScale}
-          {selectedCohort}
+          {selectedCohorts}
           {hoveredCohort}
           onSelect={selectCohort}
           onPreview={previewCohort}
@@ -494,14 +596,32 @@
         />
       </div>
 
-      {#if selectedCohort}
-        <button
-          type="button"
-          class="clear-button"
-          onclick={clearSelection}
-        >
-          Clear {selectedCohort}
-        </button>
+      {#if selectedCohorts.length > 0}
+        <div class="selected-cohorts">
+          {#each selectedCohorts as cohort}
+            <button
+              type="button"
+              class="selected-cohort-button"
+              style={`--cohort-colour: ${colourScale(cohort)}`}
+              onclick={() =>
+                removeSelectedCohort(cohort)}
+            >
+              <span class="selected-cohort-dot"></span>
+
+              <span>{cohort}</span>
+
+              <span aria-hidden="true">×</span>
+            </button>
+          {/each}
+
+          <button
+            type="button"
+            class="clear-button"
+            onclick={clearSelection}
+          >
+            Clear comparison
+          </button>
+        </div>
       {/if}
     </div>
   </aside>
@@ -524,8 +644,9 @@
         </title>
 
         <desc id="dot-plot-description">
-          Each row is a response topic and each
-          dot represents one leadership cohort.
+          Select up to two cohorts to compare their
+  responses across all topics. Hover over a
+  point to compare that response across years.
         </desc>
 
         <!-- Topic backgrounds -->
@@ -624,19 +745,27 @@
         </g>
 
         <!-- Connected highlighted cohort -->
-        {#if activeLinePath && activeCohort}
-          {#key `${activeCohort}-${selectedYear}`}
+        <!-- Connected highlighted cohorts -->
+        <g class="active-lines">
+          {#each activeLineGroups as series (
+            `${series.cohort}-${selectedYear}`
+          )}
             <path
-              class="active-line"
-              d={activeLinePath}
-              stroke={colourScale(
-                activeCohort
-              )}
+              class="active-line active-line-outline"
+              d={series.path}
               in:draw={{ duration: 350 }}
               out:fade={{ duration: 100 }}
             />
-          {/key}
-        {/if}
+
+            <path
+              class="active-line"
+              d={series.path}
+              stroke={colourScale(series.cohort)}
+              in:draw={{ duration: 350 }}
+              out:fade={{ duration: 100 }}
+            />
+          {/each}
+        </g>
 
         <!-- Dots -->
         <g class="dots">
@@ -644,7 +773,7 @@
             <circle
               class="dot"
               class:active-dot={
-                point.cohort === activeCohort
+                isActiveCohort(point.cohort)
               }
               cx={xScale(point.value)}
               cy={getRowY(point.rowIndex)}
@@ -657,7 +786,7 @@
               tabindex="0"
               aria-label={`${point.cohort}: ${point.value}% — ${point.topic}, ${point.response}`}
               aria-pressed={
-                selectedCohort === point.cohort
+                selectedCohorts.includes(point.cohort)
               }
               onmouseenter={(event) =>
                 showTooltip(event, point)}
@@ -685,29 +814,36 @@
         </g>
 
         <!-- Selected values -->
-        {#if activeCohort}
+        <!-- Selected values -->
+        {#if activeSeriesGroups.length > 0}
           <g
             class="active-values"
             in:fade={{ duration: 180 }}
             out:fade={{ duration: 100 }}
           >
-            {#each activeSeries as point}
-              <text
-                class="value-label"
-                x={getValueLabelX(
-                  point.value
-                )}
-                y={getRowY(point.rowIndex)}
-                dy="0.35em"
-                text-anchor={getValueLabelAnchor(
-                  point.value
-                )}
-                fill={colourScale(
-                  activeCohort
-                )}
-              >
-                {point.value}%
-              </text>
+            {#each activeSeriesGroups as series}
+              {#each series.points as point}
+                <text
+                  class="value-label"
+                  x={getComparisonLabelX(
+                    point,
+                    series.cohort
+                  )}
+                  y={getComparisonLabelY(
+                    point,
+                    series.cohort
+                  )}
+                  dy="0.35em"
+                  text-anchor={getValueLabelAnchor(
+                    point.value
+                  )}
+                  fill={colourScale(
+                    series.cohort
+                  )}
+                >
+                  {point.value}%
+                </text>
+              {/each}
             {/each}
           </g>
         {/if}
@@ -893,6 +1029,12 @@
     pointer-events: none;
   }
 
+  .active-line-outline {
+    stroke:white;
+    stroke-width: 7;
+    opacity: 0.9;
+  }
+
   .dot {
     cursor: pointer;
     stroke: white;
@@ -923,7 +1065,49 @@
     font-size: 11px;
     font-weight: 800;
     pointer-events: none;
+
+    paint-order: stroke;
+    stroke: white;
+    stroke-width: 3px;
+    stroke-linejoin: round;
   }
+
+  .selected-cohorts {
+    display: grid;
+    gap: 0.45rem;
+  }
+
+    .selected-cohort-button {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      width: 100%;
+
+      border: 1px solid #d5dad8;
+      border-radius: 999px;
+      padding: 0.5rem 0.7rem;
+
+      background: #f7f8f7;
+      color: #252a28;
+
+      font: inherit;
+      font-size: 0.76rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .selected-cohort-button span:last-child {
+      margin-left: auto;
+      font-size: 1rem;
+    }
+
+    .selected-cohort-dot {
+      width: 0.65rem;
+      height: 0.65rem;
+      flex: 0 0 auto;
+      border-radius: 50%;
+      background: var(--cohort-colour);
+    }
 
   @media (max-width: 900px) {
     .dot-plot {
