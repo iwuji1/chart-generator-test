@@ -3,7 +3,7 @@
   import { fade, draw } from 'svelte/transition';
   import { onMount, tick } from 'svelte';
 
-  import gsap from 'gsap';
+  import gsap from 'gsap/dist/gsap';
   import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
   import DotPlotAxis from '$lib/components/interactiveDotPlot/DotPlotAxis.svelte';
