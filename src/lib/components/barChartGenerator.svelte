@@ -3,33 +3,67 @@
   import HorizontalBarChart from '$lib/components/horizontalBarChart.svelte';
   import { defaultData, defaultAverage } from '$lib/datasets/chartData_1a.js';
 
-let chartData = $state(
-    defaultData.map((point) => ({ ...point }))
-  );
+  let chartData = $state(
+      defaultData.map((point) => ({ ...point }))
+    );
 
   let chartAverage = $state(defaultAverage);
 
   let darkMode = $state(false);
 
+  let horizontalBarChart;
+
   function handleGenerate(event) {
     chartData = event.data;
     chartAverage = event.average;
   }
+
+  function handleDownload(format) {
+    horizontalBarChart?.downloadChart(format);
+  }
 </script>
 
 <div class:dark-mode={darkMode} class="chart-generator-wrapper">
-  <div class="toolbar">
+<div class="toolbar">
+  <div class="download-controls">
+    <span class="download-label">Download:</span>
+
     <button
       type="button"
-      class="mode-button"
-      aria-pressed={darkMode}
-      onclick={() => {
-        darkMode = !darkMode;
-      }}
+      class="download-button"
+      onclick={() => handleDownload('png')}
     >
-      {darkMode ? 'Light mode' : 'Dark mode'}
+      PNG
+    </button>
+
+    <button
+      type="button"
+      class="download-button"
+      onclick={() => handleDownload('jpeg')}
+    >
+      JPEG
+    </button>
+
+    <button
+      type="button"
+      class="download-button"
+      onclick={() => handleDownload('svg')}
+    >
+      SVG
     </button>
   </div>
+
+  <button
+    type="button"
+    class="mode-button"
+    aria-pressed={darkMode}
+    onclick={() => {
+      darkMode = !darkMode;
+    }}
+  >
+    {darkMode ? 'Light mode' : 'Dark mode'}
+  </button>
+</div>
 
   <div class="chart-generator">
     <ChartControls
@@ -40,6 +74,7 @@ let chartData = $state(
     />
 
     <HorizontalBarChart
+      bind:this={horizontalBarChart}
       data={chartData}
       average={chartAverage}
       {darkMode}
@@ -82,13 +117,6 @@ let chartData = $state(
 
   color: white;
 }
-
-  .toolbar {
-    display: flex;
-    justify-content: flex-end;
-    margin-bottom: 1rem;
-  }
-
   .mode-button {
     border: 1px solid #9ca3af;
     border-radius: 999px;
@@ -120,6 +148,63 @@ let chartData = $state(
     gap: 2rem;
     align-items: start;
     width: 100%;
+  }
+
+  .toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .download-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .download-label {
+    margin-right: 0.25rem;
+    font-size: 0.875rem;
+    font-weight: 700;
+  }
+
+  .download-button {
+    border: 1px solid #9ca3af;
+    border-radius: 999px;
+    padding: 0.55rem 0.8rem;
+    background: white;
+    color: #111827;
+    font: inherit;
+    font-size: 0.875rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .download-button:hover {
+    background: #f3f4f6;
+  }
+
+  .dark-mode .download-button {
+    border-color: rgb(255 255 255 / 45%);
+    background: rgb(255 255 255 / 10%);
+    color: white;
+  }
+
+  .dark-mode .download-button:hover {
+    background: rgb(255 255 255 / 18%);
+  }
+
+  @media (max-width: 600px) {
+    .toolbar {
+      align-items: flex-start;
+      flex-direction: column-reverse;
+    }
+
+    .download-controls {
+      flex-wrap: wrap;
+    }
   }
 
   @media (max-width: 800px) {

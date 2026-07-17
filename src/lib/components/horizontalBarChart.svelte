@@ -12,6 +12,8 @@
 
   let width = $state(900);
 
+  let svgElement;
+
   const height = 950;
 
   const padding = {
@@ -98,6 +100,191 @@
       xScale(value) - 12
     );
   }
+
+  function downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+
+    link.href = url;
+    link.download = filename;
+
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    URL.revokeObjectURL(url);
+  }
+
+  function copyComputedStyles(sourceElement, clonedElement) {
+    const sourceChildren = sourceElement.children;
+    const clonedChildren = clonedElement.children;
+
+    const computedStyle = window.getComputedStyle(sourceElement);
+
+    // Copy the important SVG styles into the clone.
+    for (const property of computedStyle) {
+      clonedElement.style.setProperty(
+        property,
+        computedStyle.getPropertyValue(property),
+        computedStyle.getPropertyPriority(property)
+      );
+    }
+
+    for (let i = 0; i < sourceChildren.length; i += 1) {
+      copyComputedStyles(sourceChildren[i], clonedChildren[i]);
+    }
+  }
+
+  function createExportSvg() {
+    if (!svgElement) {
+      throw new Error('The chart SVG is not available.');
+    }
+
+    const clonedSvg = svgElement.cloneNode(true);
+
+    clonedSvg.setAttribute(
+      'xmlns',
+      'http://www.w3.org/2000/svg'
+    );
+
+    clonedSvg.setAttribute('width', String(width));
+    clonedSvg.setAttribute('height', String(height));
+    clonedSvg.setAttribute(
+      'viewBox',
+      `0 0 ${width} ${height}`
+    );
+
+    // Your chart uses scoped CSS and CSS variables.
+    // This copies their resolved values into the exported SVG.
+    copyComputedStyles(svgElement, clonedSvg);
+
+    return clonedSvg;
+  }
+
+  function serializeSvg() {
+    const clonedSvg = createExportSvg();
+    const serializer = new XMLSerializer();
+
+    return serializer.serializeToString(clonedSvg);
+  }
+
+  function exportSvg(filename = 'horizontal-bar-chart.svg') {
+    const svgString = serializeSvg();
+
+    const blob = new Blob(
+      [
+        `<?xml version="1.0" encoding="UTF-8"?>\n${svgString}`
+      ],
+      {
+        type: 'image/svg+xml;charset=utf-8'
+      }
+    );
+
+    downloadBlob(blob, filename);
+  }
+
+  async function exportRaster(
+    format,
+    filename,
+    scale = 2
+  ) {
+    // Ensure the Gotham font has finished loading before drawing.
+    if (document.fonts?.ready) {
+      await document.fonts.ready;
+    }
+
+    const svgString = serializeSvg();
+
+    const svgBlob = new Blob([svgString], {
+      type: 'image/svg+xml;charset=utf-8'
+    });
+
+    const svgUrl = URL.createObjectURL(svgBlob);
+    const image = new Image();
+
+    image.onload = () => {
+      const canvas = document.createElement('canvas');
+
+      canvas.width = width * scale;
+      canvas.height = height * scale;
+
+      const context = canvas.getContext('2d');
+
+      if (!context) {
+        URL.revokeObjectURL(svgUrl);
+        console.error('Canvas is not supported.');
+        return;
+      }
+
+      context.scale(scale, scale);
+
+      // JPEG cannot contain transparent pixels.
+      if (format === 'jpeg') {
+        context.fillStyle = darkMode ? '#073f35' : '#ffffff';
+        context.fillRect(0, 0, width, height);
+      }
+
+      context.drawImage(image, 0, 0, width, height);
+
+      const mimeType =
+        format === 'jpeg'
+          ? 'image/jpeg'
+          : 'image/png';
+
+      canvas.toBlob(
+        (blob) => {
+          if (blob) {
+            downloadBlob(blob, filename);
+          }
+
+          URL.revokeObjectURL(svgUrl);
+        },
+        mimeType,
+        format === 'jpeg' ? 0.95 : undefined
+      );
+    };
+
+    image.onerror = () => {
+      URL.revokeObjectURL(svgUrl);
+      console.error('The SVG could not be converted to an image.');
+    };
+
+    image.src = svgUrl;
+  }
+
+  /*
+  * Exported functions are available to a parent component
+  * through bind:this.
+  */
+  export function downloadChart(format) {
+    if (!svgElement) {
+      console.error('The chart has not mounted yet.');
+      return;
+    }
+
+    if (format === 'svg') {
+      exportSvg('horizontal-bar-chart.svg');
+      return;
+    }
+
+    if (format === 'png') {
+      exportRaster(
+        'png',
+        'horizontal-bar-chart.png'
+      );
+      return;
+    }
+
+    if (format === 'jpeg' || format === 'jpg') {
+      exportRaster(
+        'jpeg',
+        'horizontal-bar-chart.jpg'
+      );
+      return;
+    }
+
+    console.error(`Unsupported export format: ${format}`);
+  }
 </script>
 
 <div
@@ -106,8 +293,11 @@
   bind:clientWidth={width}
 >
   <svg
+    bind:this={svgElement}
     {width}
     {height}
+    viewBox={`0 0 ${width} ${height}`}
+    xmlns="http://www.w3.org/2000/svg"
     role="img"
     aria-label="Horizontal bar chart"
   >
