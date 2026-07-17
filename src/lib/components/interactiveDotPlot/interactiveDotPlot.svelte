@@ -4,7 +4,7 @@
   import { onMount, tick } from 'svelte';
 
   import gsap from 'gsap/dist/gsap';
-  import { ScrollTrigger } from 'gsap/ScrollTrigger';
+  import { ScrollTrigger } from 'gsap/dist/ScrollTrigger';
 
   import DotPlotAxis from '$lib/components/interactiveDotPlot/DotPlotAxis.svelte';
   import DotPlotLegend from '$lib/components/interactiveDotPlot/DotPlotLegend.svelte';
