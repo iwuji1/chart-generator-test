@@ -6,7 +6,9 @@
   import AxisX from '$lib/components/axisX.svelte';
   import Legend from '$lib/components/legend.svelte';
 
-  let { data } = $props();
+  let {
+    data = []
+  } = $props();
 
   const cohorts = [
     'Total',

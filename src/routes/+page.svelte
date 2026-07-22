@@ -3,6 +3,8 @@
   import InteractiveDotPlot from '$lib/components/interactiveDotPlotGenerator.svelte';
   import InteractiveDotPlot_2 from '$lib/components/interactiveDotPlot/interactiveDotPlot.svelte';
   import ScatterPlot from '$lib/components/scatterPlot/ScatterPlot.svelte'
+  import SlopeChart from '$lib/components/slopeChart/SlopeChart.svelte'
+
 </script>
 
 <svelte:head>
@@ -26,6 +28,9 @@
 
   <section class="wide-chart">
     <ScatterPlot />
+  </section>
+  <section class="wide-chart">
+    <SlopeChart />
   </section>
 </main>
 
