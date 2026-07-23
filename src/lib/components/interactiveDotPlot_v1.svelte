@@ -100,7 +100,7 @@
   /*
    * Responsive chart dimensions
    */
-  let containerWidth = $state(1100);
+  let containerWidth = $state(900);
 
   const width = $derived(
     Math.max(760, containerWidth)

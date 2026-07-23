@@ -2,6 +2,7 @@
   import BarChart from '$lib/components/barChartGenerator.svelte';
   import InteractiveDotPlot from '$lib/components/interactiveDotPlotGenerator.svelte';
   import InteractiveDotPlot_2 from '$lib/components/interactiveDotPlot/interactiveDotPlot.svelte';
+  import InteractiveDotPlotKF from '$lib/components/interactiveDotPlotKF/InteractiveDotPlotKF.svelte'
   import ScatterPlot from '$lib/components/scatterPlot/ScatterPlot.svelte'
   import SlopeChart from '$lib/components/slopeChart/SlopeChart.svelte'
 
@@ -29,8 +30,13 @@
   <section class="wide-chart">
     <ScatterPlot />
   </section>
+
   <section class="wide-chart">
     <SlopeChart />
+  </section>
+
+  <section class="wide-chart">
+    <InteractiveDotPlotKF />
   </section>
 </main>
 
