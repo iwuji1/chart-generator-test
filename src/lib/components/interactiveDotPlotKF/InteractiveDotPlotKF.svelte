@@ -59,8 +59,9 @@
    * - dots/range in the middle
    * - values below
    */
-  const rowHeight = 50;
+  const rowHeight = 60;
   const topicGap = 54;
+  const topicLabelHeight = 35;
 
   const currentYearData = $derived(
     longData.filter(
@@ -412,7 +413,7 @@
     }
 
     return isHighlighted(cohort)
-      ? colourScale(cohort)
+      ? '#0000000'
       : '#8f9995';
   }
 
@@ -428,7 +429,7 @@
 
     return isSelected(cohort)
       ? 1
-      : 0.45;
+      : 0.20;
   }
 
   function getDotRadius(cohort) {
@@ -476,7 +477,7 @@
       <p>
         Hover over a cohort to follow it across the
         chart. Select one cohort to highlight it, or
-        select two to compare their responses.
+        select two to compare their responses. <span class="light-grey">Range</span>
       </p>
     </div>
 
@@ -628,10 +629,18 @@
                   group.startIndex === rowIndex
               )
             }
+
+            <!-- <rect 
+                class="topic-label-bg"
+                x={0}
+                y={rowY - 55}
+                width={width}
+                height={topicLabelHeight}
+            /> -->
               <text
                 class="topic-label"
                 x={margin.left}
-                y={rowY - 34}
+                y={rowY - 40}
               >
                 {row.topic}
               </text>
@@ -737,9 +746,9 @@
         {#each sourceData as row, rowIndex}
             <text
             class="response-label"
-            x={width / 2}
+            x={margin.left}
             y={getRowY(rowIndex) - 15}
-            text-anchor="middle"
+            text-anchor="left"
             >
             {row.response}
             </text>
@@ -763,6 +772,7 @@
         r={getDotRadius(point.cohort)}
         fill={getDotFill(point.cohort)}
         stroke={getDotStroke(point.cohort)}
+        stroke-opacity={1}
         opacity={getDotOpacity(point.cohort)}
         role="button"
         tabindex="0"
@@ -969,9 +979,13 @@
     text-transform: uppercase;
   }
 
+  .topic-label-bg {
+    fill: #f7f8f7;
+  }
+
   .response-label {
     fill: #202422;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 700;
     pointer-events: none;
 
@@ -979,6 +993,7 @@
     stroke: white;
     stroke-width: 4px;
     stroke-linejoin: round;
+    text-transform: uppercase;
   }
 
   .row-guide {
@@ -988,7 +1003,7 @@
 
   .range-line {
     stroke: #d7d9d8;
-    stroke-width: 18;
+    stroke-width: 14;
     stroke-linecap: round;
   }
 
@@ -1010,7 +1025,7 @@
   }
 
   .comparison-line {
-    stroke-width: 17;
+    stroke-width: 14;
     stroke-linecap: round;
     pointer-events: none;
   }
@@ -1037,6 +1052,7 @@
 
     cursor: pointer;
     stroke-width: 1.4;
+    stroke-opacity: 100%;
 
     transition:
       r 170ms ease,
@@ -1048,7 +1064,7 @@
   .dot:hover,
   .dot:focus-visible,
   .active-dot {
-    stroke-width: 2;
+    stroke-width: 5;
     outline: none;
     filter:
       drop-shadow(
@@ -1057,7 +1073,7 @@
   }
 
   .value-label {
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 800;
     pointer-events: none;
 
@@ -1065,6 +1081,13 @@
     stroke: white;
     stroke-width: 3px;
     stroke-linejoin: round;
+  }
+
+  .light-grey {
+    background-color: #525856;
+    color: #ffffff
+    
+
   }
 
   @media (max-width: 680px) {
