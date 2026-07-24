@@ -1,4 +1,9 @@
 <script>
+
+  import { onMount } from 'svelte'
+  import { gsap } from 'gsap'
+  import { ScrollTrigger } from 'gsap/Scrolltrigger';
+
   let {
     cohorts,
     getCohortColour,
@@ -8,6 +13,8 @@
     onPreview,
     onClearPreview
   } = $props();
+
+  let legendElement;
 
   function isSelected(cohort) {
     return selectedCohorts.includes(cohort);
@@ -36,16 +43,112 @@
       onSelect(cohort);
     }
   }
+
+  onMount(() => {
+    gsap.registerPlugin(
+      ScrollTrigger
+    );
+
+    /*
+     * Respect the user's operating-system motion
+     * preference and skip decorative movement.
+     */
+    const reduceMotion =
+      window.matchMedia(
+        '(prefers-reduced-motion: reduce)'
+      ).matches;
+
+    if (
+      reduceMotion ||
+      !legendElement
+    ) {
+      return;
+    }
+
+    const context = gsap.context(() => {
+      const pills =
+        legendElement.querySelectorAll(
+          '.legend-pill'
+        );
+
+      function pulsePills() {
+        /*
+         * Stop an unfinished pulse before starting
+         * again when the controls re-enter view.
+         */
+        gsap.killTweensOf(pills);
+
+        gsap.fromTo(
+          pills,
+          {
+            scale: 1,
+            boxShadow:
+              '0 0 0 0 rgba(5, 198, 144, 0)'
+          },
+          {
+            scale: 1.06,
+            boxShadow:
+              '0 0 0 5px rgba(5, 198, 144, 0.16)',
+
+            duration: 1.034,
+            ease: 'sine.inOut',
+
+            /*
+             * One forward and one reverse movement
+             * form one pulse. repeat: 5 therefore
+             * produces three complete pulses.
+             */
+            repeat: 5,
+            yoyo: true,
+
+            stagger: 0,
+
+            onComplete: () => {
+              gsap.set(pills, {
+                clearProps:
+                  'transform,boxShadow'
+              });
+            }
+          }
+        );
+      }
+
+      ScrollTrigger.create({
+        trigger: legendElement,
+
+        /*
+         * Start when the legend enters the lower
+         * part of the viewport.
+         */
+        start: 'top 82%',
+
+        /*
+         * The trigger remains active until the
+         * legend has passed the upper viewport area.
+         */
+        end: 'bottom 18%',
+
+        onEnter: pulsePills,
+        onEnterBack: pulsePills
+      });
+    }, legendElement);
+
+    return () => {
+      context.revert();
+    };
+  });
 </script>
 
 <div
   class="legend"
   role="group"
   aria-label="Select up to two cohorts"
+  bind:this={legendElement}
 >
   {#each cohorts as cohort}
     <button
       type="button"
+      class="legend-pill"
       class:active={isActive(cohort)}
       class:selected={isSelected(cohort)}
       class:muted={isMuted(cohort)}
@@ -137,6 +240,13 @@
       transform 150ms ease,
       background 150ms ease,
       border-color 150ms ease;
+  }
+
+  .legend-pill {
+    transform-origin: center;
+    will-change: 
+      transform, 
+      box-shadow;
   }
 
   button.active .legend-dot,
