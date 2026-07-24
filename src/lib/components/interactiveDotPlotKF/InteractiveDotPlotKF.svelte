@@ -170,7 +170,7 @@
   };
 
   const rowHeight = 60;
-  const topicGap = 58;
+  const topicGap = 30;
 
   function createRowKey(
     topic,
@@ -675,7 +675,7 @@
     if (
       selectedCohorts.length === 0
     ) {
-      return 1;
+      return 0.5;
     }
 
     if (
@@ -1052,6 +1052,38 @@
         {/each}
       </g>
 
+      <g class="total-markers"
+        aria-hidden="true"
+        >
+        {#each totalPoints as point}
+          <!-- White outline -->
+          <line
+            class="total-marker-outline"
+            x1={xScale(point.value)}
+            x2={xScale(point.value)}
+            y1={getRowY(
+              point.rowIndex
+            ) - 12}
+            y2={getRowY(
+              point.rowIndex
+            ) + 12}
+          />
+
+          <!-- Visible black benchmark -->
+          <line
+            class="total-marker"
+            x1={xScale(point.value)}
+            x2={xScale(point.value)}
+            y1={getRowY(
+              point.rowIndex
+            ) - 11}
+            y2={getRowY(
+              point.rowIndex
+            ) + 11}
+          />
+        {/each}
+      </g>
+
       <!-- Selectable cohort circles -->
       <g class="cohort-dots">
         {#each cohortPoints as point}
@@ -1112,37 +1144,7 @@
         These are rendered after the cohort circles,
         so they always appear visually on top.
       -->
-      <g class="total-markers"
-        aria-hidden="true"
-        >
-        {#each totalPoints as point}
-          <!-- White outline -->
-          <line
-            class="total-marker-outline"
-            x1={xScale(point.value)}
-            x2={xScale(point.value)}
-            y1={getRowY(
-              point.rowIndex
-            ) - 12}
-            y2={getRowY(
-              point.rowIndex
-            ) + 12}
-          />
 
-          <!-- Visible black benchmark -->
-          <line
-            class="total-marker"
-            x1={xScale(point.value)}
-            x2={xScale(point.value)}
-            y1={getRowY(
-              point.rowIndex
-            ) - 11}
-            y2={getRowY(
-              point.rowIndex
-            ) + 11}
-          />
-        {/each}
-      </g>
 
       <!-- Values beneath selected circles -->
       {#if selectedSeries.length > 0}

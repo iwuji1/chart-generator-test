@@ -5,6 +5,8 @@
   import InteractiveDotPlotKF from '$lib/components/interactiveDotPlotKF/InteractiveDotPlotKF.svelte'
   import ScatterPlot from '$lib/components/scatterPlot/ScatterPlot.svelte'
   import SlopeChart from '$lib/components/slopeChart/SlopeChart.svelte'
+  import Stat1 from '$lib/components/charts/stat-1/InteractiveDotPlotStat1.svelte'
+  import Stat2 from '$lib/components/charts/stat-2/InteractiveDotPlotStat2.svelte'
 
 </script>
 
@@ -38,6 +40,15 @@
   <section class="wide-chart">
     <InteractiveDotPlotKF />
   </section>
+
+  <section class="wide-chart">
+    <Stat1 />
+  </section>
+
+  <section class="wide-chart">
+    <Stat2 />
+  </section>
+
 </main>
 
 <style>
