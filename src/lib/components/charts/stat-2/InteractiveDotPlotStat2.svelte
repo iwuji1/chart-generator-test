@@ -116,7 +116,7 @@
   /*
    * Reserve room above each row for its statement.
    */
-  const rowHeight = 94;
+  const rowHeight = 65;
 
   function getRowY(rowIndex) {
     return (
@@ -569,7 +569,7 @@
 
   function getDotStroke(cohort) {
     if (isHighlighted(cohort)) {
-      return getCohortColour(cohort);
+      return '#111111';
     }
 
     return '#111111';
@@ -953,7 +953,7 @@
           <g class="statement-row">
             <foreignObject
               x={margin.left}
-              y={rowY - 52}
+              y={rowY - 62}
               width={
                 width -
                 margin.left -

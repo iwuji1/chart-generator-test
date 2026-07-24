@@ -5,9 +5,6 @@
     fade
   } from 'svelte/transition';
 
-  import DotPlotLegendStat1
-    from './DotPlotLegendStat1.svelte';
-
   import DotPlotTooltipStat1
     from './DotPlotTooltipStat1.svelte';
 
@@ -703,9 +700,11 @@
           role="group"
           aria-label="Select employee segment"
         >
-          {#each segments as segment}
+          {#each segments as segment, index}
             <button
               type="button"
+              style:animation-delay={`${index * 35}ms`}
+              class="cohort-pill"
               class:active={
                 selectedSegment === segment
               }
@@ -1333,6 +1332,14 @@
 
     gap: 1rem;
     width: 100%;
+  }
+
+  .cohort-pill {
+    animation:
+        pillEnter
+        320ms
+        cubic-bezier(.22,1,.36,1)
+        both;
   }
 
   .segment-control,
