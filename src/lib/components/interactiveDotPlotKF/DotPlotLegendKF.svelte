@@ -1,7 +1,7 @@
 <script>
   let {
     cohorts,
-    colourScale,
+    getCohortColour,
     selectedCohorts = [],
     hoveredCohort = null,
     onSelect,
@@ -49,7 +49,7 @@
       class:active={isActive(cohort)}
       class:selected={isSelected(cohort)}
       class:muted={isMuted(cohort)}
-      style={`--cohort-colour: ${colourScale(cohort)}`}
+      style={`--cohort-colour: ${getCohortColour(cohort)}`}
       aria-pressed={isSelected(cohort)}
       onmouseenter={() => onPreview(cohort)}
       onmouseleave={onClearPreview}
@@ -80,6 +80,7 @@
     display: flex;
     flex-wrap: wrap;
     gap: 0.4rem;
+    width: 100%;
   }
 
   button {

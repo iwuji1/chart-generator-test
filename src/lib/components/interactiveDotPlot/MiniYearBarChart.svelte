@@ -11,14 +11,41 @@
   } = $props();
 
   const width = 280;
-  const height = 115;
+
+  /*
+   * Use a compact chart for one year and the
+   * complete height for historical Job Level data.
+   */
+  const height = $derived(
+    data.length > 1
+      ? 115
+      : 54
+  );
 
   const margin = {
-    top: 9,
-    right: 32,
+    top: 7,
+    right: 34,
     bottom: 5,
     left: 38
   };
+
+  /*
+   * Remove invalid entries and place the years in
+   * chronological order.
+   */
+  const chartData = $derived.by(() => {
+    return data
+      .filter(
+        (point) =>
+          Number.isFinite(
+            point.value
+          )
+      )
+      .sort(
+        (a, b) =>
+          a.year - b.year
+      );
+  });
 
   const xScale = $derived(
     scaleLinear()
@@ -30,7 +57,10 @@
   );
 
   const yearDomain = $derived(
-    data.map((point) => String(point.year))
+    chartData.map(
+      (point) =>
+        String(point.year)
+    )
   );
 
   const yScale = $derived(
@@ -40,7 +70,11 @@
         margin.top,
         height - margin.bottom
       ])
-      .padding(0.28)
+      .padding(
+        chartData.length > 1
+          ? 0.28
+          : 0.18
+      )
   );
 </script>
 
@@ -53,18 +87,34 @@
     {height}
     viewBox={`0 0 ${width} ${height}`}
     role="img"
-    aria-label={`Historical comparison for ${data[0]?.cohort ?? 'selected cohort'}`}
+    aria-label={`Historical comparison for ${chartData[0]?.cohort ?? 'selected cohort'}`}
   >
-    {#each data as point}
-      {@const barY = yScale(String(point.year))}
-      {@const barHeight = yScale.bandwidth()}
-      {@const barWidth = xScale(point.value) - margin.left}
+    {#each chartData as point}
+      {@const barY =
+        yScale(
+          String(point.year)
+        )}
 
-      <g>
+      {@const barHeight =
+        yScale.bandwidth()}
+
+      {@const barWidth =
+        xScale(point.value) -
+        margin.left}
+
+      <g
+        class:active-row={
+          point.year === activeYear
+        }
+      >
         <text
           class="year"
+          class:active={
+            point.year === activeYear
+          }
           x={margin.left - 7}
-          y={barY + barHeight / 2}
+          y={barY +
+            barHeight / 2}
           dominant-baseline="middle"
           text-anchor="end"
         >
@@ -75,26 +125,42 @@
           class="bar-background"
           x={margin.left}
           y={barY}
-          width={xScale(100) - margin.left}
+          width={
+            xScale(100) -
+            margin.left
+          }
           height={barHeight}
           rx="2"
         />
 
         <rect
           class="bar"
-          class:active={point.year === activeYear}
+          class:active={
+            point.year === activeYear
+          }
           x={margin.left}
           y={barY}
-          width={Math.max(0, barWidth)}
+          width={Math.max(
+            0,
+            barWidth
+          )}
           height={barHeight}
           rx="2"
         />
 
         <text
           class="value"
-          x={xScale(point.value) + 6}
-          y={barY + barHeight / 2}
+          class:active={
+            point.year === activeYear
+          }
+          x={Math.min(
+            xScale(point.value) + 6,
+            width - 2
+          )}
+          y={barY +
+            barHeight / 2}
           dominant-baseline="middle"
+          text-anchor="start"
         >
           {point.value}%
         </text>
@@ -105,38 +171,60 @@
 
 <style>
   .mini-chart {
-    margin-top: 0.75rem;
+    margin-top: 0.55rem;
   }
 
   svg {
     display: block;
+
     width: 100%;
     height: auto;
+
+    overflow: visible;
   }
 
   .bar-background {
-    fill: rgb(255 255 255 / 9%);
+    fill:
+      rgb(255 255 255 / 9%);
   }
 
   .bar {
-    fill: rgb(255 255 255 / 38%);
+    fill:
+      rgb(255 255 255 / 38%);
+
+    transition:
+      width 180ms ease,
+      fill 180ms ease;
   }
 
   .bar.active {
-    fill: var(--active-colour);
+    fill:
+      var(--active-colour);
   }
 
   text {
     fill: white;
+
     font-family: inherit;
     font-size: 11px;
   }
 
   .year {
-    opacity: 0.8;
+    opacity: 0.7;
+  }
+
+  .year.active {
+    font-weight: 800;
+    opacity: 1;
   }
 
   .value {
+    font-weight: 700;
+    opacity: 0.82;
+  }
+
+  .value.active {
     font-weight: 800;
+    opacity: 1;
   }
 </style>
