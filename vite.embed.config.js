@@ -39,7 +39,7 @@ export default defineConfig({
 
   build: {
     outDir:
-      'dist-embeds',
+      'static/charts',
 
     /*
      * Don't delete Stat 1 when
@@ -48,6 +48,8 @@ export default defineConfig({
     emptyOutDir: false,
 
     minify: true,
+
+    assetsInlineLimit: 100000,
 
     lib: {
       entry,
