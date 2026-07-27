@@ -692,7 +692,7 @@
     <div class="controls">
       <div class="segment-control">
         <p class="control-label">
-          View segment
+          Select segment
         </p>
 
         <div
