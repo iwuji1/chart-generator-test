@@ -1,4 +1,4 @@
-import rawData from '$lib/datasets/stat_2.tsv?raw';
+import rawData from '$lib/datasets/stat_5.tsv?raw';
 
 export const segments = [
   'Job Level',

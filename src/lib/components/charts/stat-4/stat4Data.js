@@ -1,4 +1,4 @@
-import rawData from '$lib/datasets/stat_2.tsv?raw';
+import rawData from '$lib/datasets/stat_4.tsv?raw';
 
 export const segments = [
   'Job Level',
@@ -15,21 +15,6 @@ export const segmentOptions = {
     'Mid-Level Leader',
     'First Level Supervisor/Manager',
     'Individual Contributor'
-  ],
-
-  'Business Unit': [
-    'Accounting and Finance',
-    'Corporate Management',
-    'Customer Service',
-    'Human Resources',
-    'Information Technology',
-    'Marketing and Advertising',
-    'Operations',
-    'Production',
-    'Purchasing',
-    'Research and Development',
-    'Sales',
-    'Other'
   ],
 
   Industry: [
@@ -50,7 +35,7 @@ export const segmentOptions = {
     'Professional Services',
     'Consumer Goods',
     'Utility',
-    'Industry — Other'
+    'Other'
   ],
 
   'Age Generation': [
@@ -58,19 +43,6 @@ export const segmentOptions = {
     'Millennial',
     'Gen X',
     'Baby Boomers'
-  ],
-
-  'No. Of Employees': [
-    '1 - 50',
-    '51 - 500',
-    '501 - 5,000',
-    '5,001 -  50,000',
-    '50,001 - 100,000',
-    '100,001 - 200,000',
-    '200,001 - 300,000',
-    '300,001 - 400,000',
-    '400,001 - 500,000',
-    'Over 500,000'
   ],
 
   'Work Location': [
@@ -88,6 +60,12 @@ export const segmentOptions = {
   ]
 };
 
+export const topicOrder = [
+  'IMPORTANT FACTORS FOR A NEW JOB',
+  'IMPORTANT FACTORS FOR STAYING IN YOUR JOB',
+  'IMPORTANT FACTORS FOR LEAVING YOUR JOB'
+];
+
 function splitTsvLine(line) {
   return line
     .split('\t')
@@ -95,33 +73,75 @@ function splitTsvLine(line) {
 }
 
 function toPercentage(value) {
-  const cleanedValue = String(
+  const cleaned = String(
     value ?? ''
   )
     .trim()
     .replace('%', '');
 
   if (
-    cleanedValue === '' ||
-    cleanedValue === '-'
+    cleaned === '' ||
+    cleaned === '-'
   ) {
     return null;
   }
 
-  const number = Number(cleanedValue);
+  const number = Number(cleaned);
 
   if (!Number.isFinite(number)) {
     return null;
   }
 
-  /*
-   * Supports:
-   * 61%  → 61
-   * 0.61 → 61
-   */
   return number <= 1
     ? Math.round(number * 100)
     : Math.round(number);
+}
+
+function getColumn(
+  row,
+  ...possibleNames
+) {
+  for (const name of possibleNames) {
+    const value = row[name];
+
+    if (
+      value !== undefined &&
+      value !== null &&
+      String(value).trim() !== ''
+    ) {
+      return value;
+    }
+  }
+
+  return '';
+}
+
+function normaliseTopic(
+  subHeading
+) {
+  const value = String(
+    subHeading ?? ''
+  ).toLowerCase();
+
+  if (
+    value.includes('new job')
+  ) {
+    return 'IMPORTANT FACTORS FOR A NEW JOB';
+  }
+
+  if (
+    value.includes('staying')
+  ) {
+    return 'IMPORTANT FACTORS FOR STAYING IN YOUR JOB';
+  }
+
+  if (
+    value.includes('leaving')
+  ) {
+    return 'IMPORTANT FACTORS FOR LEAVING YOUR JOB';
+  }
+
+  return subHeading;
 }
 
 function createSegmentValues(
@@ -151,40 +171,6 @@ function createSegmentValues(
   );
 }
 
-export function formatSubsegmentLabel(
-  subsegment
-) {
-  return subsegment ===
-    'Industry — Other'
-    ? 'Other'
-    : subsegment;
-}
-
-/*
- * Supports both "Key" and "Kay" in case
- * the spreadsheet currently contains the typo.
- */
-function getColumn(
-  row,
-  ...possibleNames
-) {
-  for (
-    const name of possibleNames
-  ) {
-    const value = row[name];
-
-    if (
-      value !== undefined &&
-      value !== null &&
-      String(value).trim() !== ''
-    ) {
-      return value;
-    }
-  }
-
-  return '';
-}
-
 function createHeadlineStats(
   rowByColumn
 ) {
@@ -198,7 +184,7 @@ function createHeadlineStats(
       )
     );
 
-  const firstCohort =
+  const firstWho =
     String(
       getColumn(
         rowByColumn,
@@ -209,12 +195,12 @@ function createHeadlineStats(
 
   if (
     Number.isFinite(firstValue) &&
-    firstCohort
+    firstWho
   ) {
     headlines.push({
       index: 0,
       value: firstValue,
-      cohort: firstCohort
+      cohort: firstWho
     });
   }
 
@@ -226,7 +212,7 @@ function createHeadlineStats(
       )
     );
 
-  const secondCohort =
+  const secondWho =
     String(
       getColumn(
         rowByColumn,
@@ -237,19 +223,19 @@ function createHeadlineStats(
 
   if (
     Number.isFinite(secondValue) &&
-    secondCohort
+    secondWho
   ) {
     headlines.push({
       index: 1,
       value: secondValue,
-      cohort: secondCohort
+      cohort: secondWho
     });
   }
 
   return headlines;
 }
 
-export function parseStat2Data(
+export function parseStat4Data(
   tsv = rawData
 ) {
   const lines = tsv
@@ -260,14 +246,10 @@ export function parseStat2Data(
     .filter(Boolean);
 
   /*
-   * New files have a broad grouping row first,
-   * followed by the actual column names.
-   *
-   * Rather than assuming the row starts with
-   * "Measure", find the row containing the
-   * required columns.
+   * Find the actual column row, rather than relying
+   * on its first field.
    */
-  const columnHeaderIndex =
+  const headerIndex =
     lines.findIndex((line) => {
       const cells =
         splitTsvLine(line);
@@ -278,55 +260,19 @@ export function parseStat2Data(
       );
     });
 
-  if (columnHeaderIndex === -1) {
+  if (headerIndex === -1) {
     throw new Error(
-      'Could not find the stat_2.tsv column header.'
+      'Could not find stat_4.tsv header row.'
     );
   }
 
-  const rawColumns =
-    splitTsvLine(
-      lines[columnHeaderIndex]
-    );
-
-  /*
-   * Business Unit and Industry both contain
-   * "Other".
-   *
-   * Keep the first as "Other", rename the
-   * subsequent one for Industry.
-   */
-  const duplicateCounts =
-    new Map();
-
   const columns =
-    rawColumns.map(
-      (column) => {
-        const count =
-          duplicateCounts.get(
-            column
-          ) ?? 0;
-
-        duplicateCounts.set(
-          column,
-          count + 1
-        );
-
-        if (
-          column !== 'Other' ||
-          count === 0
-        ) {
-          return column;
-        }
-
-        return 'Industry — Other';
-      }
+    splitTsvLine(
+      lines[headerIndex]
     );
 
   return lines
-    .slice(
-      columnHeaderIndex + 1
-    )
+    .slice(headerIndex + 1)
     .map(splitTsvLine)
     .map(
       (
@@ -348,56 +294,46 @@ export function parseStat2Data(
             )
           );
 
-        const total =
+        const average =
           toPercentage(
-            /*
-             * New dataset uses TOTAL.
-             * ALL fallback keeps this compatible
-             * with older versions.
-             */
-            rowByColumn.AVERAGE ??
-              rowByColumn.ALL
+            rowByColumn.AVERAGE
           );
-
-        const headlineText =
-          String(
-            getColumn(
-              rowByColumn,
-              'Just sharing the text these selections are based on'
-            )
-          ).trim();
 
         return {
           id:
-            `stat-2-${rowIndex}`,
-
-          reportSection:
-            rowByColumn
-              .ReportSection ??
-            '',
+            `stat-4-${rowIndex}`,
 
           order:
-            rowByColumn.Order ??
-            '',
+            Number(
+              rowByColumn.Order
+            ) || rowIndex + 1,
 
-          subHeading:
-            rowByColumn[
-              'Sub-Heading'
-            ]?.trim() ?? '',
+          topic:
+            normaliseTopic(
+              rowByColumn[
+                'Sub-Heading'
+              ]
+            ),
 
-          measure:
+          reason:
             rowByColumn
               .Measure
-              ?.trim(),
+              ?.trim() ?? '',
 
-          total,
-
-          headlineText,
+          headlineText:
+            String(
+              getColumn(
+                rowByColumn,
+                'Just sharing the text these selections are based on'
+              )
+            ).trim(),
 
           headlines:
             createHeadlineStats(
               rowByColumn
             ),
+
+          average,
 
           segments:
             createSegmentValues(
@@ -408,15 +344,20 @@ export function parseStat2Data(
     )
     .filter(
       (row) =>
-        row.measure &&
+        row.topic &&
+        row.reason &&
         Number.isFinite(
-          row.total
+          row.average
         )
+    )
+    .sort(
+      (a, b) =>
+        a.order - b.order
     );
 }
 
 export const SourceData =
-  parseStat2Data();
+  parseStat4Data();
 
 export function createLongData(
   sourceData = SourceData,
@@ -424,17 +365,20 @@ export function createLongData(
 ) {
   return sourceData.flatMap(
     (row, rowIndex) => {
-      const cohortValues =
+      const values =
         row.segments[
           activeSegment
         ] ?? {};
 
-      const totalPoint = {
+      const averagePoint = {
         id:
-          `${row.id}-total`,
+          `${row.id}-average`,
 
-        measure:
-          row.measure,
+        topic:
+          row.topic,
+
+        reason:
+          row.reason,
 
         rowIndex,
 
@@ -442,23 +386,24 @@ export function createLongData(
           activeSegment,
 
         cohort:
-          'Total',
+          'Average',
 
         value:
-          row.total
+          row.average
       };
 
       const cohortPoints =
-        Object.entries(
-          cohortValues
-        )
+        Object.entries(values)
           .map(
             ([cohort, value]) => ({
               id:
                 `${row.id}-${activeSegment}-${cohort}`,
 
-              measure:
-                row.measure,
+              topic:
+                row.topic,
+
+              reason:
+                row.reason,
 
               rowIndex,
 
@@ -478,7 +423,7 @@ export function createLongData(
           );
 
       return [
-        totalPoint,
+        averagePoint,
         ...cohortPoints
       ];
     }

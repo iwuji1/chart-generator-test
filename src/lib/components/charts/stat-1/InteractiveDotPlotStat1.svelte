@@ -24,6 +24,10 @@
     initialSegment = 'Job Level'
   } = $props();
 
+  let selectedView = $state('headline');
+
+  const isHeadlineView = $derived(selectedView === 'headline')
+
   let selectedSegment = $state(
     segments.includes(initialSegment)
       ? initialSegment
@@ -81,12 +85,88 @@
     )
   );
 
+  const orderedCohortPoints = $derived.by(() => {
+    return [...cohortPoints].sort(
+      (a, b) => {
+        const aSelected =
+          selectedCohorts.indexOf(
+            a.cohort
+          );
+
+        const bSelected =
+          selectedCohorts.indexOf(
+            b.cohort
+          );
+
+        /*
+        * Unselected first.
+        */
+        const aPriority =
+          aSelected === -1
+            ? 0
+            : aSelected === 1
+              ? 1
+              : 2;
+
+        const bPriority =
+          bSelected === -1
+            ? 0
+            : bSelected === 1
+              ? 1
+              : 2;
+
+        return (
+          aPriority -
+          bPriority
+        );
+      }
+    );
+  });
+
   const totalPoints = $derived(
     currentDots.filter(
       (point) =>
         point.cohort === 'Total'
     )
   );
+
+const headlinePoints =
+  $derived.by(() => {
+    return sourceData.flatMap(
+      (row, rowIndex) => {
+        return (
+          row.headlines ?? []
+        )
+          .filter(
+            (headline) =>
+              Number.isFinite(
+                headline.value
+              )
+          )
+          .map((headline) => ({
+            id:
+              `${row.id}-headline-${headline.index}`,
+
+            rowIndex,
+
+            headlineIndex:
+              headline.index,
+
+            value:
+              headline.value,
+
+            cohort:
+              headline.cohort,
+
+            measure:
+              row.measure,
+
+            text:
+              row.headlineText ?? ''
+          }));
+      }
+    );
+  });
 
   /*
    * Responsive SVG dimensions.
@@ -116,7 +196,7 @@
   /*
    * Reserve room above each row for its statement.
    */
-  const rowHeight = 94;
+  const rowHeight = 65;
 
   function getRowY(rowIndex) {
     return (
@@ -165,6 +245,15 @@
     '#05c690',
     '#007da4'
   ];
+
+  function getHeadlineColour(
+    headlineIndex
+  ) {
+    return comparisonColours[
+      headlineIndex %
+        comparisonColours.length
+    ];
+  }
 
   function getCohortColour(cohort) {
     const selectedIndex =
@@ -352,6 +441,7 @@
   });
 
   function selectSegment(segment) {
+    selectedView = 'explore';
     selectedSegment = segment;
 
     /*
@@ -363,26 +453,60 @@
     hoveredPoint = null;
   }
 
+  function selectHeadlineView() {
+    selectedView = 'headline';
+    selectedCohorts = [];
+    hoveredCohort = null;
+    hoveredPoint = null;
+  }
+
   function selectCohort(cohort) {
-    if (
-      selectedCohorts.includes(
+    const selectedIndex =
+      selectedCohorts.indexOf(
         cohort
-      )
-    ) {
-      selectedCohorts =
-        selectedCohorts.filter(
-          (selected) =>
-            selected !== cohort
-        );
+      );
+
+    /*
+    * Clicking comparison removes comparison only.
+    */
+    if (selectedIndex === 1) {
+      selectedCohorts = [
+        selectedCohorts[0]
+      ];
 
       return;
     }
 
+    /*
+    * Highlight cannot be removed while a
+    * comparison is active.
+    */
     if (
-      selectedCohorts.length < 2
+      selectedIndex === 0 &&
+      selectedCohorts.length === 2
+    ) {
+      return;
+    }
+
+    /*
+    * Clicking the sole highlighted cohort clears it.
+    */
+    if (
+      selectedIndex === 0 &&
+      selectedCohorts.length === 1
+    ) {
+      selectedCohorts = [];
+
+      return;
+    }
+
+    /*
+    * Nothing selected → highlight.
+    */
+    if (
+      selectedCohorts.length === 0
     ) {
       selectedCohorts = [
-        ...selectedCohorts,
         cohort
       ];
 
@@ -390,9 +514,22 @@
     }
 
     /*
-     * Once two cohorts are selected, a new selection
-     * replaces the oldest one.
-     */
+    * Highlight exists → add comparison.
+    */
+    if (
+      selectedCohorts.length === 1
+    ) {
+      selectedCohorts = [
+        selectedCohorts[0],
+        cohort
+      ];
+
+      return;
+    }
+
+    /*
+    * Both exist → replace comparison.
+    */
     selectedCohorts = [
       selectedCohorts[0],
       cohort
@@ -418,6 +555,28 @@
     hoveredCohort = null;
     hoveredPoint = null;
   }
+
+  function clearComparisonGroup() {
+    if (!highlightedGroup) return;
+
+    selectedCohorts = [
+      highlightedGroup
+    ];
+
+    hoveredPoint = null;
+    hoveredCohort = null;
+  }
+
+  function clearHighlightedGroup() {
+    if (comparisonGroup) return;
+
+    selectedCohorts = [];
+
+    hoveredPoint = null;
+    hoveredCohort = null;
+  }
+
+
 
   function showTooltip(
     event,
@@ -569,7 +728,7 @@
 
   function getDotStroke(cohort) {
     if (isHighlighted(cohort)) {
-      return getCohortColour(cohort);
+      return '#111111';
     }
 
     return '#111111';
@@ -636,55 +795,39 @@
 <section class="dot-plot-stat-1">
   <div class="chart-heading">
     <h2>
-      STAT 1: How employees experience workload and
-      organisational pressure
+      STAT 1: Employee Workload and capabilities
     </h2>
 
 <p class="chart-explanation">
-  Choose an employee segment, then hover over a
+  This chart shows the levels of agreement with selected statements. Each
   <span class="inline-key cohort-key">
     <img
       src={circleIcon}
       alt=""
       aria-hidden="true"
     />
-    cohort
   </span>
-  to follow its values through the chart.
-
-  Use
-  <span class="inline-key highlight-key">
+  represents a distinct cohort, the
+  <span class="inline-key average-key">
     <span
-      class="colour-dot"
-      style:background={comparisonColours[0]}
+      class="average-marker-icon"
+      aria-hidden="true"
     ></span>
-    Highlight group
   </span>
-  to select the first cohort, then
-  <span class="inline-key compare-key">
-    <span
-      class="colour-dot"
-      style:background={comparisonColours[1]}
-    ></span>
-    Compare with
-  </span>
-  to add a second.
-
-  The
+  marker is the average response percentage and the grey bar shows the
   <span class="inline-key range-key">
     full range
   </span>
-  shows the spread across the available employee
-  groups, while the
-  <span class="inline-key average-key">
-    <img
-      src={lineIcon}
-      alt=""
-      aria-hidden="true"
-    />
-    average marker
+  of lowest to highest responses across every cohort. The initial view shows headline insights, you can then 
+  filter to explore different segment groups. You can highlight 
+  <span class="inline-key highlight-key" style:background={comparisonColours[0]}>
+    cohorts
   </span>
-  shows the average value for the total cohort.
+  to see all their related values, and also compare
+  <span class="inline-key compare-key" style:background={comparisonColours[1]}>
+    responses
+  </span>
+  with another cohort.
 </p>
   </div>
 
@@ -692,146 +835,167 @@
     <div class="controls">
       <div class="segment-control">
         <p class="control-label">
-          Select segment
+          Select View
         </p>
-
-        <div
-          class="segment-selector"
-          role="group"
-          aria-label="Select employee segment"
-        >
-          {#each segments as segment, index}
+          <div
+            class="segment-selector"
+            role="group"
+            aria-label="Select chart view"
+          >
             <button
               type="button"
-              style:animation-delay={`${index * 35}ms`}
-              class="cohort-pill"
+              class="headline-tab"
               class:active={
-                selectedSegment === segment
+                isHeadlineView
               }
               aria-pressed={
-                selectedSegment === segment
+                isHeadlineView
               }
-              onclick={() =>
-                selectSegment(segment)}
+              onclick={
+                selectHeadlineView
+              }
             >
-              {segment}
+              Headline
             </button>
-          {/each}
-        </div>
+
+            {#each segments as segment}
+              <button
+                type="button"
+                class:active={
+                  !isHeadlineView &&
+                  selectedSegment === segment
+                }
+                aria-pressed={
+                  !isHeadlineView &&
+                  selectedSegment === segment
+                }
+                onclick={() =>
+                  selectSegment(segment)}
+              >
+                {segment}
+              </button>
+            {/each}
+          </div>
       </div>
 
+      {#if !isHeadlineView}
       <div class="cohort-control">
-        <p class="control-label">
-            Compare employee groups
-        </p>
+      <div class="comparison-selectors">
 
-        <div class="comparison-selectors">
-            <label class="select-field">
-            <span class="select-label">
-                Highlight group
-            </span>
+        <!-- HIGHLIGHT -->
+        <div class="select-field">
+          <label
+            class="inline-key select-label-1"
+            for="highlight-cohort"
+          >
+            HIGHLIGHT COHORT
+          </label>
 
+          <div class="select-input-row">
             <select
-                value={highlightedGroup}
-                onchange={
-                selectHighlightedGroup}
-                oninput={previewSelectOption}
-                onfocus={previewSelectOption}
-                onblur={clearSelectPreview}
+              id="highlight-cohort"
+              value={highlightedGroup}
+              onchange={selectHighlightedGroup}
+              oninput={previewSelectOption}
+              onfocus={previewSelectOption}
+              onblur={clearSelectPreview}
             >
-                <option value="">
-                Select a group
-                </option>
+              <option value="">
+                Select a cohort
+              </option>
 
-                {#each cohorts as cohort}
+              {#each cohorts as cohort}
                 <option value={cohort}>
-                    {cohort}
+                  {cohort}
                 </option>
-                {/each}
+              {/each}
             </select>
-            </label>
 
-            <label
-            class="select-field"
-            class:disabled-field={
-                !highlightedGroup
-            }
+            <button
+              type="button"
+              class="
+                reset-selection
+                reset-highlight
+              "
+              onclick={clearHighlightedGroup}
+              disabled={
+                !highlightedGroup ||
+                !!comparisonGroup
+              }
+              aria-label="Clear highlighted cohort"
+              title={
+                comparisonGroup
+                  ? 'Remove comparison first'
+                  : 'Clear highlighted cohort'
+              }
             >
-            <span class="select-label">
-                Compare with
-            </span>
-
-            <select
-                value={comparisonGroup}
-                disabled={!highlightedGroup}
-                onchange={
-                selectComparisonGroup}
-                oninput={previewSelectOption}
-                onfocus={previewSelectOption}
-                onblur={clearSelectPreview}
-            >
-                <option value="">
-                {highlightedGroup
-                    ? 'Select another group'
-                    : 'Choose a highlight group first'}
-                </option>
-
-                {#each
-                availableComparisonCohorts
-                as cohort
-                }
-                <option value={cohort}>
-                    {cohort}
-                </option>
-                {/each}
-            </select>
-            </label>
+              <span aria-hidden="true">
+                ×
+              </span>
+            </button>
+          </div>
         </div>
 
-        {#if highlightedGroup}
-            <div
-            class="selection-summary"
-            aria-live="polite"
+
+        <!-- COMPARE -->
+        <div
+          class="select-field"
+          class:disabled-field={
+            !highlightedGroup
+          }
+        >
+          <label
+            class="inline-key select-label-2"
+            for="compare-cohort"
+          >
+            COMPARE WITH
+          </label>
+
+          <div class="select-input-row">
+            <select
+              id="compare-cohort"
+              value={comparisonGroup}
+              disabled={!highlightedGroup}
+              onchange={selectComparisonGroup}
+              oninput={previewSelectOption}
+              onfocus={previewSelectOption}
+              onblur={clearSelectPreview}
             >
-            <span
-                class="selection-item"
+              <option value="">
+                {highlightedGroup
+                  ? 'Select another cohort'
+                  : 'Choose a highlight cohort first'}
+              </option>
+
+              {#each
+                availableComparisonCohorts
+                as cohort
+              }
+                <option value={cohort}>
+                  {cohort}
+                </option>
+              {/each}
+            </select>
+
+            <button
+              type="button"
+              class="
+                reset-selection
+                reset-compare
+              "
+              onclick={clearComparisonGroup}
+              disabled={!comparisonGroup}
+              aria-label="Clear comparison cohort"
+              title="Clear comparison cohort"
             >
-                <span
-                class="selection-dot"
-                style:background={
-                    comparisonColours[0]
-                }
-                ></span>
-
-                {highlightedGroup}
-            </span>
-
-            {#if comparisonGroup}
-                <span
-                class="selection-item"
-                >
-                <span
-                    class="selection-dot"
-                    style:background={
-                    comparisonColours[1]
-                    }
-                ></span>
-
-                {comparisonGroup}
-                </span>
-            {/if}
-            </div>
-        {/if}
+              <span aria-hidden="true">
+                ×
+              </span>
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
-
-    {#if selectedCohorts.length > 0}
-      <button
-        type="button"
-        class="clear-button"
-        onclick={clearSelection}
-      >
-        Clear comparison
-      </button>
     {/if}
   </div>
 
@@ -850,16 +1014,28 @@
       "
     >
       <title id="stat-1-dot-plot-title">
-        Workload and organisational pressure by
-        {selectedSegment}
+        {#if isHeadlineView}
+          Headline findings for how employees react
+          to the use of AI
+        {:else}
+          How employees react to the use of AI by
+          {selectedSegment}
+        {/if}
       </title>
 
       <desc id="stat-1-dot-plot-description">
-        Each row represents a survey statement.
-        Circles represent employee cohorts. The grey
-        horizontal bar shows the range across all
-        employee groups, and the black vertical
-        marker represents the Total response.
+        {#if isHeadlineView}
+          Each row represents a survey statement.
+          Coloured circles show the editorially selected
+          headline findings. Grey bars show the range
+          across employee cohorts and black vertical
+          markers show the average response.
+        {:else}
+          Each row represents a survey statement.
+          Circles represent employee cohorts. Grey bars
+          show the range across employee groups and black
+          vertical markers show the average response.
+        {/if}
       </desc>
 
       <defs>
@@ -931,7 +1107,7 @@
             y="53"
             text-anchor="middle"
           >
-            {tick}%
+            {tick}<tspan font-size= "7" baseline-shift="super">%</tspan>
           </text>
 
           <line
@@ -956,7 +1132,7 @@
           <g class="statement-row">
             <foreignObject
               x={margin.left}
-              y={rowY - 52}
+              y={rowY - 62}
               width={
                 width -
                 margin.left -
@@ -1005,7 +1181,7 @@
       </g>
 
       <!-- Two-cohort comparison lines -->
-      {#if comparisonRows.length > 0}
+      {#if !isHeadlineView && comparisonRows.length > 0}
         <g class="comparison-lines">
           {#each comparisonRows as comparison}
             <line
@@ -1054,6 +1230,7 @@
 
       <!-- Hover connection -->
       {#if
+        !isHeadlineView &&
         hoverLinePath &&
         hoveredCohort &&
         selectedCohorts.length === 0
@@ -1086,11 +1263,20 @@
       {/if}
 
       <!-- Non-interactive Total benchmark -->
+       {#if !isHeadlineView}
       <g
         class="total-markers"
         aria-hidden="true"
       >
         {#each totalPoints as point}
+        <text
+          class="avg-value"
+          x={xScale(point.value)}
+          y={getRowY(point.rowIndex) - 16}
+          text-anchor="middle"
+          >
+          {point.value}<tspan font-size= "7" baseline-shift="super">%</tspan>
+        </text>
           <line
             class="total-marker-outline"
             x1={xScale(point.value)}
@@ -1123,11 +1309,250 @@
             }
           />
         {/each}
-      </g>      
+      </g>
+      {/if}
+      <!-- Headline editorial points -->
+      {#if isHeadlineView}
+        <g
+          class="headline-points"
+          aria-label="Headline findings"
+        >
+          {#each
+            headlinePoints
+            as point
+          }
+            <circle
+              class="headline-dot"
+              cx={xScale(
+                point.value
+              )}
+              cy={getRowY(
+                point.rowIndex
+              )}
+              r="9"
+              fill={getHeadlineColour(
+                point.headlineIndex
+              )}
+              stroke="#111111"
+              stroke-width="2"
+            >
+              <title>
+                {point.cohort}:
+                {point.value}%
+              </title>
+            </circle>
+          {/each}
+        </g>
+      {/if}
+      {#if isHeadlineView}
+        <g
+          class="headline-value-labels"
+          aria-hidden="true"
+        >
+          {#each
+            headlinePoints
+            as point
+          }
+            <text
+              class="headline-value-label"
+              x={xScale(
+                point.value
+              )}
+              y={
+                point.headlineIndex === 0
+                  ? getRowY(
+                      point.rowIndex
+                    ) - 14
+                  : getRowY(
+                      point.rowIndex
+                    ) + 24
+              }
+              text-anchor="middle"
+              fill={getHeadlineColour(
+                point.headlineIndex
+              )}
+            >
+              {point.value}<tspan
+                font-size="7"
+                baseline-shift="super"
+              >%</tspan>
+            </text>
+          {/each}
+        </g>
+      {/if}
+    {#if isHeadlineView}
+        <g
+          class="headline-cohort-labels"
+          aria-hidden="true"
+        >
+          {#each
+            headlinePoints
+            as point
+          }
+
+            {#if point.headlineIndex === 1}
+              <text
+                class="headline-cohort-label"
+                x={xScale(
+                  point.value
+                )}
+                y={
+                  getRowY(
+                    point.rowIndex
+                  ) + 36
+                }
+                text-anchor="middle"
+                fill={getHeadlineColour(
+                  point.headlineIndex
+                )}
+              >
+                <!-- {point.cohort} -->
+              </text>
+            {/if}
+
+          {/each}
+        </g>
+      {/if}
+
+      {#if isHeadlineView}
+        <g
+          class="headline-annotations"
+          aria-hidden="true"
+        >
+          {#each headlinePoints as point}
+
+            {#if
+              point.headlineIndex === 0 &&
+              point.text
+            }
+
+              {@const dotX =
+                xScale(point.value)}
+
+              {@const dotY =
+                getRowY(
+                  point.rowIndex
+                )}
+
+              <!--
+                Find the secondary headline point
+                belonging to this same chart row.
+              -->
+              {@const secondaryPoint =
+                headlinePoints.find(
+                  (candidate) =>
+                    candidate.rowIndex ===
+                      point.rowIndex &&
+                    candidate.headlineIndex === 1
+                )}
+
+              {@const annotationWidth =
+                215}
+
+              {@const annotationHeight =
+                42}
+
+              {@const annotationGap =
+                16}
+
+              <!--
+                If the secondary stat is on the right,
+                force the annotation left, and vice versa.
+
+                If there is no secondary point, use
+                whichever side has more room.
+              -->
+              {@const placeOnLeft =
+                secondaryPoint
+                  ? secondaryPoint.value >=
+                    point.value
+                  : dotX >
+                    width / 2}
+
+              {@const rawAnnotationX =
+                placeOnLeft
+                  ? dotX -
+                    annotationWidth -
+                    annotationGap
+                  : dotX +
+                    annotationGap}
+
+              <!--
+                Prevent the callout from escaping
+                the chart bounds.
+              -->
+              {@const annotationX =
+                Math.max(
+                  margin.left,
+                  Math.min(
+                    rawAnnotationX,
+                    width -
+                      margin.right -
+                      annotationWidth
+                  )
+                )}
+
+              {@const annotationY =
+                dotY -
+                annotationHeight / 2}
+
+              <!-- Connector line -->
+              <!-- <line
+                class="
+                  headline-annotation-connector
+                "
+                x1={
+                  placeOnLeft
+                    ? dotX - 9
+                    : dotX + 9
+                }
+                x2={
+                  placeOnLeft
+                    ? annotationX +
+                      annotationWidth
+                    : annotationX
+                }
+                y1={dotY}
+                y2={dotY}
+                stroke={getHeadlineColour(
+                  point.headlineIndex
+                )}
+              /> -->
+
+              <foreignObject
+                x={annotationX}
+                y={annotationY}
+                width={
+                  annotationWidth
+                }
+                height={
+                  annotationHeight
+                }
+                class="
+                  headline-annotation-object
+                "
+              >
+                <div
+                  xmlns="http://www.w3.org/1999/xhtml"
+                  class="
+                    headline-annotation
+                  "
+                  style:border-color="#626866"
+                >
+                  {point.text}
+                </div>
+              </foreignObject>
+
+            {/if}
+
+          {/each}
+        </g>
+      {/if}
 
       <!-- Selectable cohort circles -->
+       {#if !isHeadlineView}
       <g class="cohort-dots">
-        {#each cohortPoints as point}
+        {#each orderedCohortPoints as point}
           {@const hidden =
             isDotHidden(point.cohort)}
 
@@ -1201,15 +1626,16 @@
           >
             <title>
               {point.cohort}:
-              {point.value}%
+              {point.value}<tspan font-size= "7" baseline-shift="super">%</tspan>
             </title>
           </circle>
         {/each}
       </g>
+      {/if}
 
 
       <!-- Selected values -->
-      {#if selectedSeries.length > 0}
+      {#if !isHeadlineView && selectedSeries.length > 0}
         <g
           class="selected-values"
           in:fade={{
@@ -1233,7 +1659,7 @@
                   series.cohort
                 )}
               >
-                {point.value}%
+                {point.value}<tspan font-size= "7" baseline-shift="super">%</tspan>
               </text>
             {/each}
           {/each}
@@ -1286,6 +1712,7 @@
       );
 
     line-height: 1.15;
+    text-transform: uppercase;
   }
 
   .chart-heading p {
@@ -1332,14 +1759,6 @@
 
     gap: 1rem;
     width: 100%;
-  }
-
-  .cohort-pill {
-    animation:
-        pillEnter
-        320ms
-        cubic-bezier(.22,1,.36,1)
-        both;
   }
 
   .segment-control,
@@ -1396,6 +1815,24 @@
     color: white;
   }
 
+  button.headline-tab {
+    border-color: #8e9995;
+    background: #ffffff;
+    color: #000000;
+    font-weight: 800;
+  }
+
+  .headline-tab:hover,
+  .headline-tab:focus-visible {
+    border-color: #05c690;
+  }
+
+  button.headline-tab.active {
+    border-color: #123f37;
+    background: #123f37;
+    color: white;
+  }
+
   .clear-button {
     justify-self: start;
 
@@ -1422,18 +1859,24 @@
     .inline-key {
     display: inline-flex;
     align-items: center;
-    gap: 0.28rem;
+    gap: 0.3rem;
 
-    margin-inline: 0.12rem;
     border-radius: 999px;
     padding: 0.08rem 0.42rem;
 
-    font-size: 0.78rem;
-    font-weight: 700;
-    line-height: 1.4;
+    /* font-size: 0.78rem;
+    font-weight: 700; */
 
     vertical-align: middle;
-    white-space: nowrap;
+    }
+
+    .average-marker-icon {
+      display: inline-block;
+      width: 2px;
+      height: 14px;
+      border-radius: 999px;
+      background: #111;
+      flex: 0 0 auto;
     }
 
     .inline-key img {
@@ -1461,7 +1904,7 @@
         white
         );
 
-    color: #343a37;
+    color: #ffffff;
     }
 
     .compare-key {
@@ -1472,7 +1915,7 @@
         white
         );
 
-    color: #343a37;
+    color: #ffffff;
     }
 
     .average-key {
@@ -1536,9 +1979,9 @@
   }
 
   .axis-grid-line {
-    stroke: #ecefed;
+    stroke: #d8dddb;
     stroke-width: 1;
-    stroke-dasharray: 2 5;
+    stroke-dasharray: 3 5;
 
     pointer-events: none;
   }
@@ -1648,6 +2091,11 @@
     stroke-linecap: round;
   }
 
+  .avg-value {
+    font-size: 10px;
+    font-weight: 500;
+  }
+
   .value-label {
     font-size: 10px;
     font-weight: 800;
@@ -1676,10 +2124,24 @@
   min-width: 0;
 }
 
-.select-label {
-  color: #444a47;
-  font-size: 0.75rem;
+.select-label-1 {
+  color: #ffffff;
   font-weight: 700;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  background: #05c690;
+  width: 30%;
+
+}
+.select-label-2 {
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  background: #007da4;
+  width: 25%;
 }
 
 .select-field select {
@@ -1752,6 +2214,173 @@
   flex: 0 0 auto;
 
   border-radius: 50%;
+}
+
+.select-input-row {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1fr)
+    34px;
+  gap: 0.4rem;
+  align-items: center;
+
+  width: 100%;
+  min-width: 0;
+}
+
+.reset-selection {
+  display: grid;
+  place-items: center;
+
+  width: 34px;
+  height: 34px;
+
+  box-sizing: border-box;
+
+  border: 1px solid #cbd1ce;
+  border-radius: 50%;
+
+  background: white;
+
+  font: inherit;
+  font-size: 1.25rem;
+  font-weight: 400;
+  line-height: 1;
+
+  cursor: pointer;
+
+  transition:
+    background 150ms ease,
+    color 150ms ease,
+    border-color 150ms ease,
+    opacity 150ms ease,
+    transform 150ms ease;
+}
+
+.reset-selection span {
+  /*
+   * Optical correction for × glyph.
+   */
+  transform: translateY(-1px);
+}
+
+/* green highlight reset */
+.reset-highlight {
+  border-color: #05c690;
+  color: #05c690;
+}
+
+.reset-highlight:hover:not(:disabled) {
+  background: #05c690;
+  color: white;
+}
+
+/* blue comparison reset */
+.reset-compare {
+  border-color: #007da4;
+  color: #007da4;
+}
+
+.reset-compare:hover:not(:disabled) {
+  background: #007da4;
+  color: white;
+}
+
+.reset-selection:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+.reset-selection:active:not(:disabled) {
+  transform: scale(0.92);
+}
+
+.reset-selection:disabled {
+  border-color: #dfe3e1;
+  background: #f3f5f4;
+  color: #afb6b3;
+
+  opacity: 0.55;
+
+  cursor: not-allowed;
+}
+
+/* ---------------------------------
+   Headline view
+   --------------------------------- */
+
+.headline-points,
+.headline-value-labels,
+.headline-cohort-labels,
+.headline-annotations {
+  pointer-events: none;
+}
+
+.headline-dot {
+  filter:
+    drop-shadow(
+      0 2px 3px
+      rgb(0 0 0 / 18%)
+    );
+}
+
+.headline-value-label {
+  font-size: 10px;
+  font-weight: 800;
+
+  paint-order: stroke;
+  stroke: white;
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+
+.headline-cohort-label {
+  font-size: 7px;
+  font-weight: 700;
+
+  paint-order: stroke;
+  stroke: white;
+  stroke-width: 2px;
+  stroke-linejoin: round;
+}
+
+.headline-annotation-connector {
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.headline-annotation-object {
+  overflow: visible;
+}
+
+.headline-annotation {
+  display: flex;
+  align-items: center;
+
+  width: 100%;
+  height: 100%;
+
+  box-sizing: border-box;
+
+  padding:
+    0.35rem
+    0.55rem;
+
+  border: 1px solid;
+  border-radius: 8px;
+
+  background:
+    rgb(255 255 255 / 96%);
+
+  color: #252a28;
+
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1.25;
+
+  box-shadow:
+    0 3px 8px
+    rgb(0 0 0 / 10%);
 }
 
 @media (max-width: 680px) {

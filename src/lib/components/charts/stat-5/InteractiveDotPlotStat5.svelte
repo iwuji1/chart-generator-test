@@ -5,15 +5,15 @@
     fade
   } from 'svelte/transition';
 
-  import DotPlotTooltipStat2
-    from './DotPlotTooltipStat2.svelte';
+  import DotPlotTooltipStat5
+    from './DotPlotTooltipStat5.svelte';
 
   import {
     SourceData,
     createLongData,
     segments,
     segmentOptions
-  } from './stat2Data.js';
+  } from './stat5Data.js';
 
   import circleIcon from '$lib/assets/icons/circle.svg'
   import lineIcon from '$lib/assets/icons/line.svg'
@@ -795,7 +795,7 @@ const headlinePoints =
 <section class="dot-plot-stat-1">
   <div class="chart-heading">
     <h2>
-      STAT 2: How employees React to the use of AI
+      STAT 5: Performance & Efficiency
     </h2>
 
 <p class="chart-explanation">
@@ -1668,7 +1668,7 @@ const headlinePoints =
     </svg>
   </div>
 
-  <DotPlotTooltipStat2
+  <DotPlotTooltipStat5
     point={hoveredPoint}
     x={tooltipX}
     y={tooltipY}
