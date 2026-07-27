@@ -13,7 +13,14 @@
 		"check": "svelte-kit sync && svelte-check --tsconfig ./jsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./jsconfig.json --watch",
 		"lint": "prettier --check . && eslint .",
-		"format": "prettier --write ."
+		"format": "prettier --write .",
+		"build:stat1": "KF_STAT=1 vite build --config vite.embed.config.js",
+		"build:stat2": "KF_STAT=2 vite build --config vite.embed.config.js",
+		"build:stat3": "KF_STAT=3 vite build --config vite.embed.config.js",
+		"build:stat4": "KF_STAT=4 vite build --config vite.embed.config.js",
+		"build:stat5": "KF_STAT=5 vite build --config vite.embed.config.js",
+		"build:stat6": "KF_STAT=6 vite build --config vite.embed.config.js",
+		"build:charts": "rm -rf dist-embeds && npm run build:stat1 && npm run build:stat2 && npm run build:stat3 && npm run build:stat4 && npm run build:stat5 && npm run build:stat6"
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",
@@ -30,7 +37,8 @@
 		"svelte": "^5.56.1",
 		"svelte-check": "^4.6.0",
 		"typescript": "^6.0.3",
-		"vite": "^8.0.16"
+		"vite": "^8.0.16",
+		"vite-plugin-css-injected-by-js": "^5.0.2"
 	},
 	"dependencies": {
 		"d3": "^7.9.0",
