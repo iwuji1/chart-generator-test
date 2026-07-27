@@ -98,7 +98,7 @@
 
     <div class="value-row">
       <span class="value">
-        {point.value}%
+        {point.value}<sup>a</sup>
       </span>
 
       <span class="value-label">

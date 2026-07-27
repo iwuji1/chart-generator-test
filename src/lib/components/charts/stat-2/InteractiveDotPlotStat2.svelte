@@ -81,6 +81,44 @@
     )
   );
 
+  const orderedCohortPoints = $derived.by(() => {
+    return [...cohortPoints].sort(
+      (a, b) => {
+        const aSelected =
+          selectedCohorts.indexOf(
+            a.cohort
+          );
+
+        const bSelected =
+          selectedCohorts.indexOf(
+            b.cohort
+          );
+
+        /*
+        * Unselected first.
+        */
+        const aPriority =
+          aSelected === -1
+            ? 0
+            : aSelected === 1
+              ? 1
+              : 2;
+
+        const bPriority =
+          bSelected === -1
+            ? 0
+            : bSelected === 1
+              ? 1
+              : 2;
+
+        return (
+          aPriority -
+          bPriority
+        );
+      }
+    );
+  });
+
   const totalPoints = $derived(
     currentDots.filter(
       (point) =>
@@ -364,25 +402,52 @@
   }
 
   function selectCohort(cohort) {
-    if (
-      selectedCohorts.includes(
+    const selectedIndex =
+      selectedCohorts.indexOf(
         cohort
-      )
-    ) {
-      selectedCohorts =
-        selectedCohorts.filter(
-          (selected) =>
-            selected !== cohort
-        );
+      );
+
+    /*
+    * Clicking comparison removes comparison only.
+    */
+    if (selectedIndex === 1) {
+      selectedCohorts = [
+        selectedCohorts[0]
+      ];
 
       return;
     }
 
+    /*
+    * Highlight cannot be removed while a
+    * comparison is active.
+    */
     if (
-      selectedCohorts.length < 2
+      selectedIndex === 0 &&
+      selectedCohorts.length === 2
+    ) {
+      return;
+    }
+
+    /*
+    * Clicking the sole highlighted cohort clears it.
+    */
+    if (
+      selectedIndex === 0 &&
+      selectedCohorts.length === 1
+    ) {
+      selectedCohorts = [];
+
+      return;
+    }
+
+    /*
+    * Nothing selected → highlight.
+    */
+    if (
+      selectedCohorts.length === 0
     ) {
       selectedCohorts = [
-        ...selectedCohorts,
         cohort
       ];
 
@@ -390,9 +455,22 @@
     }
 
     /*
-     * Once two cohorts are selected, a new selection
-     * replaces the oldest one.
-     */
+    * Highlight exists → add comparison.
+    */
+    if (
+      selectedCohorts.length === 1
+    ) {
+      selectedCohorts = [
+        selectedCohorts[0],
+        cohort
+      ];
+
+      return;
+    }
+
+    /*
+    * Both exist → replace comparison.
+    */
     selectedCohorts = [
       selectedCohorts[0],
       cohort
@@ -418,6 +496,28 @@
     hoveredCohort = null;
     hoveredPoint = null;
   }
+
+  function clearComparisonGroup() {
+    if (!highlightedGroup) return;
+
+    selectedCohorts = [
+      highlightedGroup
+    ];
+
+    hoveredPoint = null;
+    hoveredCohort = null;
+  }
+
+  function clearHighlightedGroup() {
+    if (comparisonGroup) return;
+
+    selectedCohorts = [];
+
+    hoveredPoint = null;
+    hoveredCohort = null;
+  }
+
+
 
   function showTooltip(
     event,
@@ -640,7 +740,7 @@
     </h2>
 
 <p class="chart-explanation">
-  Choose an employee segment, then hover over a
+  This chart shows the levels of agreement with selected statements. Each
   <span class="inline-key cohort-key">
     <img
       src={circleIcon}
@@ -649,32 +749,7 @@
     />
     cohort
   </span>
-  to follow its values through the chart.
-
-  Use
-  <span class="inline-key highlight-key">
-    <span
-      class="colour-dot"
-      style:background={comparisonColours[0]}
-    ></span>
-    Highlight group
-  </span>
-  to select the first cohort, then
-  <span class="inline-key compare-key">
-    <span
-      class="colour-dot"
-      style:background={comparisonColours[1]}
-    ></span>
-    Compare with
-  </span>
-  to add a second.
-
-  The
-  <span class="inline-key range-key">
-    full range
-  </span>
-  shows the spread across the available employee
-  groups, while the
+  represents a distinct cohort. The
   <span class="inline-key average-key">
     <img
       src={lineIcon}
@@ -683,7 +758,20 @@
     />
     average marker
   </span>
-  shows the average value for the total cohort.
+  is the average response percentage and the grey bar shows the
+  <span class="inline-key range-key">
+    full range
+  </span>
+  of lowest to highest responses across every cohort. The initial view shows headline insights, you can then 
+  filter to explore different segment groups. You can highlight 
+  <span class="inline-key highlight-key" style:background={comparisonColours[0]}>
+    cohorts
+  </span>
+  to see all their related values, and also compare
+  <span class="inline-key compare-key" style:background={comparisonColours[1]}>
+    responses
+  </span>
+  with another cohort.
 </p>
   </div>
 
@@ -691,7 +779,7 @@
     <div class="controls">
       <div class="segment-control">
         <p class="control-label">
-          Select segment
+          Select View
         </p>
 
         <div
@@ -718,118 +806,122 @@
       </div>
 
       <div class="cohort-control">
-        <p class="control-label">
-            Compare employee groups
-        </p>
+      <div class="comparison-selectors">
 
-        <div class="comparison-selectors">
-            <label class="select-field">
-            <span class="select-label">
-                Highlight group
-            </span>
+        <!-- HIGHLIGHT -->
+        <div class="select-field">
+          <label
+            class="inline-key select-label-1"
+            for="highlight-cohort"
+          >
+            HIGHLIGHT COHORT
+          </label>
 
+          <div class="select-input-row">
             <select
-                value={highlightedGroup}
-                onchange={
-                selectHighlightedGroup}
-                oninput={previewSelectOption}
-                onfocus={previewSelectOption}
-                onblur={clearSelectPreview}
+              id="highlight-cohort"
+              value={highlightedGroup}
+              onchange={selectHighlightedGroup}
+              oninput={previewSelectOption}
+              onfocus={previewSelectOption}
+              onblur={clearSelectPreview}
             >
-                <option value="">
+              <option value="">
                 Select a group
-                </option>
+              </option>
 
-                {#each cohorts as cohort}
+              {#each cohorts as cohort}
                 <option value={cohort}>
-                    {cohort}
+                  {cohort}
                 </option>
-                {/each}
+              {/each}
             </select>
-            </label>
 
-            <label
-            class="select-field"
-            class:disabled-field={
-                !highlightedGroup
-            }
+            <button
+              type="button"
+              class="
+                reset-selection
+                reset-highlight
+              "
+              onclick={clearHighlightedGroup}
+              disabled={
+                !highlightedGroup ||
+                !!comparisonGroup
+              }
+              aria-label="Clear highlighted cohort"
+              title={
+                comparisonGroup
+                  ? 'Remove comparison first'
+                  : 'Clear highlighted cohort'
+              }
             >
-            <span class="select-label">
-                Compare with
-            </span>
-
-            <select
-                value={comparisonGroup}
-                disabled={!highlightedGroup}
-                onchange={
-                selectComparisonGroup}
-                oninput={previewSelectOption}
-                onfocus={previewSelectOption}
-                onblur={clearSelectPreview}
-            >
-                <option value="">
-                {highlightedGroup
-                    ? 'Select another group'
-                    : 'Choose a highlight group first'}
-                </option>
-
-                {#each
-                availableComparisonCohorts
-                as cohort
-                }
-                <option value={cohort}>
-                    {cohort}
-                </option>
-                {/each}
-            </select>
-            </label>
+              <span aria-hidden="true">
+                ×
+              </span>
+            </button>
+          </div>
         </div>
 
-        {#if highlightedGroup}
-            <div
-            class="selection-summary"
-            aria-live="polite"
+
+        <!-- COMPARE -->
+        <div
+          class="select-field"
+          class:disabled-field={
+            !highlightedGroup
+          }
+        >
+          <label
+            class="inline-key select-label-2"
+            for="compare-cohort"
+          >
+            COMPARE WITH
+          </label>
+
+          <div class="select-input-row">
+            <select
+              id="compare-cohort"
+              value={comparisonGroup}
+              disabled={!highlightedGroup}
+              onchange={selectComparisonGroup}
+              oninput={previewSelectOption}
+              onfocus={previewSelectOption}
+              onblur={clearSelectPreview}
             >
-            <span
-                class="selection-item"
+              <option value="">
+                {highlightedGroup
+                  ? 'Select another group'
+                  : 'Choose a highlight group first'}
+              </option>
+
+              {#each
+                availableComparisonCohorts
+                as cohort
+              }
+                <option value={cohort}>
+                  {cohort}
+                </option>
+              {/each}
+            </select>
+
+            <button
+              type="button"
+              class="
+                reset-selection
+                reset-compare
+              "
+              onclick={clearComparisonGroup}
+              disabled={!comparisonGroup}
+              aria-label="Clear comparison cohort"
+              title="Clear comparison cohort"
             >
-                <span
-                class="selection-dot"
-                style:background={
-                    comparisonColours[0]
-                }
-                ></span>
-
-                {highlightedGroup}
-            </span>
-
-            {#if comparisonGroup}
-                <span
-                class="selection-item"
-                >
-                <span
-                    class="selection-dot"
-                    style:background={
-                    comparisonColours[1]
-                    }
-                ></span>
-
-                {comparisonGroup}
-                </span>
-            {/if}
-            </div>
-        {/if}
+              <span aria-hidden="true">
+                ×
+              </span>
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
-
-    {#if selectedCohorts.length > 0}
-      <button
-        type="button"
-        class="clear-button"
-        onclick={clearSelection}
-      >
-        Clear comparison
-      </button>
-    {/if}
   </div>
 
   <div
@@ -928,7 +1020,7 @@
             y="53"
             text-anchor="middle"
           >
-            {tick}%
+            {tick}<tspan font-size= "7" baseline-shift="super">%</tspan>
           </text>
 
           <line
@@ -1088,6 +1180,14 @@
         aria-hidden="true"
       >
         {#each totalPoints as point}
+        <text
+          class="avg-value"
+          x={xScale(point.value)}
+          y={getRowY(point.rowIndex) - 16}
+          text-anchor="middle"
+          >
+          AVG: {point.value} <tspan font-size= "7" baseline-shift="super">%</tspan>
+        </text>
           <line
             class="total-marker-outline"
             x1={xScale(point.value)}
@@ -1124,7 +1224,7 @@
 
       <!-- Selectable cohort circles -->
       <g class="cohort-dots">
-        {#each cohortPoints as point}
+        {#each orderedCohortPoints as point}
           {@const hidden =
             isDotHidden(point.cohort)}
 
@@ -1198,7 +1298,7 @@
           >
             <title>
               {point.cohort}:
-              {point.value}%
+              {point.value}<tspan font-size= "7" baseline-shift="super">%</tspan>
             </title>
           </circle>
         {/each}
@@ -1230,7 +1330,7 @@
                   series.cohort
                 )}
               >
-                {point.value}%
+                {point.value}<tspan font-size= "7" baseline-shift="super">%</tspan>
               </text>
             {/each}
           {/each}
@@ -1283,6 +1383,7 @@
       );
 
     line-height: 1.15;
+    text-transform: uppercase;
   }
 
   .chart-heading p {
@@ -1450,7 +1551,7 @@
         white
         );
 
-    color: #343a37;
+    color: #ffffff;
     }
 
     .compare-key {
@@ -1461,7 +1562,7 @@
         white
         );
 
-    color: #343a37;
+    color: #ffffff;
     }
 
     .average-key {
@@ -1525,9 +1626,9 @@
   }
 
   .axis-grid-line {
-    stroke: #ecefed;
+    stroke: #d8dddb;
     stroke-width: 1;
-    stroke-dasharray: 2 5;
+    stroke-dasharray: 3 5;
 
     pointer-events: none;
   }
@@ -1637,6 +1738,11 @@
     stroke-linecap: round;
   }
 
+  .avg-value {
+    font-size: 10px;
+    font-weight: 500;
+  }
+
   .value-label {
     font-size: 10px;
     font-weight: 800;
@@ -1665,10 +1771,24 @@
   min-width: 0;
 }
 
-.select-label {
-  color: #444a47;
-  font-size: 0.75rem;
+.select-label-1 {
+  color: #ffffff;
   font-weight: 700;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  background: #05c690;
+  width: 30%;
+
+}
+.select-label-2 {
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  background: #007da4;
+  width: 25%;
 }
 
 .select-field select {
@@ -1741,6 +1861,95 @@
   flex: 0 0 auto;
 
   border-radius: 50%;
+}
+
+.select-input-row {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1fr)
+    34px;
+  gap: 0.4rem;
+  align-items: center;
+
+  width: 100%;
+  min-width: 0;
+}
+
+.reset-selection {
+  display: grid;
+  place-items: center;
+
+  width: 34px;
+  height: 34px;
+
+  box-sizing: border-box;
+
+  border: 1px solid #cbd1ce;
+  border-radius: 50%;
+
+  background: white;
+
+  font: inherit;
+  font-size: 1.25rem;
+  font-weight: 400;
+  line-height: 1;
+
+  cursor: pointer;
+
+  transition:
+    background 150ms ease,
+    color 150ms ease,
+    border-color 150ms ease,
+    opacity 150ms ease,
+    transform 150ms ease;
+}
+
+.reset-selection span {
+  /*
+   * Optical correction for × glyph.
+   */
+  transform: translateY(-1px);
+}
+
+/* green highlight reset */
+.reset-highlight {
+  border-color: #05c690;
+  color: #05c690;
+}
+
+.reset-highlight:hover:not(:disabled) {
+  background: #05c690;
+  color: white;
+}
+
+/* blue comparison reset */
+.reset-compare {
+  border-color: #007da4;
+  color: #007da4;
+}
+
+.reset-compare:hover:not(:disabled) {
+  background: #007da4;
+  color: white;
+}
+
+.reset-selection:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+.reset-selection:active:not(:disabled) {
+  transform: scale(0.92);
+}
+
+.reset-selection:disabled {
+  border-color: #dfe3e1;
+  background: #f3f5f4;
+  color: #afb6b3;
+
+  opacity: 0.55;
+
+  cursor: not-allowed;
 }
 
 @media (max-width: 680px) {

@@ -98,7 +98,7 @@
 
     <div class="value-row">
       <span class="value">
-        {point.value}%
+        {point.value}<sup>%</sup>
       </span>
 
       <span class="value-label">
@@ -177,5 +177,10 @@
     font-size: 0.8rem;
     text-transform: uppercase;
     letter-spacing: 0.04em;
+  }
+
+  sup {
+    font-weight: 300;
+    font-size: 1rem;
   }
 </style>
