@@ -24,6 +24,10 @@
     initialSegment = 'Job Level'
   } = $props();
 
+  let selectedView = $state('headline');
+
+  const isHeadlineView = $derived(selectedView === 'headline')
+
   let selectedSegment = $state(
     segments.includes(initialSegment)
       ? initialSegment
@@ -126,6 +130,44 @@
     )
   );
 
+const headlinePoints =
+  $derived.by(() => {
+    return sourceData.flatMap(
+      (row, rowIndex) => {
+        return (
+          row.headlines ?? []
+        )
+          .filter(
+            (headline) =>
+              Number.isFinite(
+                headline.value
+              )
+          )
+          .map((headline) => ({
+            id:
+              `${row.id}-headline-${headline.index}`,
+
+            rowIndex,
+
+            headlineIndex:
+              headline.index,
+
+            value:
+              headline.value,
+
+            cohort:
+              headline.cohort,
+
+            measure:
+              row.measure,
+
+            text:
+              row.headlineText ?? ''
+          }));
+      }
+    );
+  });
+
   /*
    * Responsive SVG dimensions.
    *
@@ -203,6 +245,15 @@
     '#05c690',
     '#007da4'
   ];
+
+  function getHeadlineColour(
+    headlineIndex
+  ) {
+    return comparisonColours[
+      headlineIndex %
+        comparisonColours.length
+    ];
+  }
 
   function getCohortColour(cohort) {
     const selectedIndex =
@@ -390,12 +441,20 @@
   });
 
   function selectSegment(segment) {
+    selectedView = 'explore';
     selectedSegment = segment;
 
     /*
      * Selections from one segment may not exist in
      * another segment.
      */
+    selectedCohorts = [];
+    hoveredCohort = null;
+    hoveredPoint = null;
+  }
+
+  function selectHeadlineView() {
+    selectedView = 'headline';
     selectedCohorts = [];
     hoveredCohort = null;
     hoveredPoint = null;
@@ -747,16 +806,14 @@
       alt=""
       aria-hidden="true"
     />
-    cohort
   </span>
   represents a distinct cohort. The
   <span class="inline-key average-key">
-    <img
-      src={lineIcon}
-      alt=""
+    <span
+      class="average-marker-icon"
       aria-hidden="true"
-    />
-    average marker
+    ></span>
+    marker
   </span>
   is the average response percentage and the grey bar shows the
   <span class="inline-key range-key">
@@ -781,30 +838,48 @@
         <p class="control-label">
           Select View
         </p>
-
-        <div
-          class="segment-selector"
-          role="group"
-          aria-label="Select employee segment"
-        >
-          {#each segments as segment}
+          <div
+            class="segment-selector"
+            role="group"
+            aria-label="Select chart view"
+          >
             <button
               type="button"
+              class="headline-tab"
               class:active={
-                selectedSegment === segment
+                isHeadlineView
               }
               aria-pressed={
-                selectedSegment === segment
+                isHeadlineView
               }
-              onclick={() =>
-                selectSegment(segment)}
+              onclick={
+                selectHeadlineView
+              }
             >
-              {segment}
+              Headline
             </button>
-          {/each}
-        </div>
+
+            {#each segments as segment}
+              <button
+                type="button"
+                class:active={
+                  !isHeadlineView &&
+                  selectedSegment === segment
+                }
+                aria-pressed={
+                  !isHeadlineView &&
+                  selectedSegment === segment
+                }
+                onclick={() =>
+                  selectSegment(segment)}
+              >
+                {segment}
+              </button>
+            {/each}
+          </div>
       </div>
 
+      {#if !isHeadlineView}
       <div class="cohort-control">
       <div class="comparison-selectors">
 
@@ -922,6 +997,7 @@
         </div>
       </div>
     </div>
+    {/if}
   </div>
 
   <div
@@ -939,16 +1015,28 @@
       "
     >
       <title id="stat-1-dot-plot-title">
-        Workload and organisational pressure by
-        {selectedSegment}
+        {#if isHeadlineView}
+          Headline findings for how employees react
+          to the use of AI
+        {:else}
+          How employees react to the use of AI by
+          {selectedSegment}
+        {/if}
       </title>
 
       <desc id="stat-1-dot-plot-description">
-        Each row represents a survey statement.
-        Circles represent employee cohorts. The grey
-        horizontal bar shows the range across all
-        employee groups, and the black vertical
-        marker represents the Total response.
+        {#if isHeadlineView}
+          Each row represents a survey statement.
+          Coloured circles show the editorially selected
+          headline findings. Grey bars show the range
+          across employee cohorts and black vertical
+          markers show the average response.
+        {:else}
+          Each row represents a survey statement.
+          Circles represent employee cohorts. Grey bars
+          show the range across employee groups and black
+          vertical markers show the average response.
+        {/if}
       </desc>
 
       <defs>
@@ -1094,7 +1182,7 @@
       </g>
 
       <!-- Two-cohort comparison lines -->
-      {#if comparisonRows.length > 0}
+      {#if !isHeadlineView && comparisonRows.length > 0}
         <g class="comparison-lines">
           {#each comparisonRows as comparison}
             <line
@@ -1143,6 +1231,7 @@
 
       <!-- Hover connection -->
       {#if
+        !isHeadlineView &&
         hoverLinePath &&
         hoveredCohort &&
         selectedCohorts.length === 0
@@ -1186,7 +1275,7 @@
           y={getRowY(point.rowIndex) - 16}
           text-anchor="middle"
           >
-          AVG: {point.value} <tspan font-size= "7" baseline-shift="super">%</tspan>
+          {point.value} <tspan font-size= "7" baseline-shift="super">%</tspan>
         </text>
           <line
             class="total-marker-outline"
@@ -1220,9 +1309,251 @@
             }
           />
         {/each}
-      </g>      
+      </g>
+      <!-- Headline editorial points -->
+      {#if isHeadlineView}
+        <g
+          class="headline-points"
+          aria-label="Headline findings"
+        >
+          {#each
+            headlinePoints
+            as point
+          }
+            <circle
+              class="headline-dot"
+              cx={xScale(
+                point.value
+              )}
+              cy={getRowY(
+                point.rowIndex
+              )}
+              r="9"
+              fill={getHeadlineColour(
+                point.headlineIndex
+              )}
+              stroke="#111111"
+              stroke-width="2"
+            >
+              <title>
+                {point.cohort}:
+                {point.value}%
+              </title>
+            </circle>
+          {/each}
+        </g>
+      {/if}
+      {#if isHeadlineView}
+        <g
+          class="headline-value-labels"
+          aria-hidden="true"
+        >
+          {#each
+            headlinePoints
+            as point
+          }
+            <text
+              class="headline-value-label"
+              x={xScale(
+                point.value
+              )}
+              y={
+                point.headlineIndex === 0
+                  ? getRowY(
+                      point.rowIndex
+                    ) - 14
+                  : getRowY(
+                      point.rowIndex
+                    ) + 24
+              }
+              text-anchor="middle"
+              fill={getHeadlineColour(
+                point.headlineIndex
+              )}
+            >
+              {point.value}<tspan
+                font-size="7"
+                baseline-shift="super"
+              >%</tspan>
+            </text>
+          {/each}
+        </g>
+      {/if}
+    {#if isHeadlineView}
+        <g
+          class="headline-cohort-labels"
+          aria-hidden="true"
+        >
+          {#each
+            headlinePoints
+            as point
+          }
+
+            {#if point.headlineIndex === 1}
+              <text
+                class="headline-cohort-label"
+                x={xScale(
+                  point.value
+                )}
+                y={
+                  getRowY(
+                    point.rowIndex
+                  ) + 36
+                }
+                text-anchor="middle"
+                fill={getHeadlineColour(
+                  point.headlineIndex
+                )}
+              >
+                {point.cohort}
+              </text>
+            {/if}
+
+          {/each}
+        </g>
+      {/if}
+
+      {#if isHeadlineView}
+        <g
+          class="headline-annotations"
+          aria-hidden="true"
+        >
+          {#each headlinePoints as point}
+
+            {#if
+              point.headlineIndex === 0 &&
+              point.text
+            }
+
+              {@const dotX =
+                xScale(point.value)}
+
+              {@const dotY =
+                getRowY(
+                  point.rowIndex
+                )}
+
+              <!--
+                Find the secondary headline point
+                belonging to this same chart row.
+              -->
+              {@const secondaryPoint =
+                headlinePoints.find(
+                  (candidate) =>
+                    candidate.rowIndex ===
+                      point.rowIndex &&
+                    candidate.headlineIndex === 1
+                )}
+
+              {@const annotationWidth =
+                215}
+
+              {@const annotationHeight =
+                42}
+
+              {@const annotationGap =
+                16}
+
+              <!--
+                If the secondary stat is on the right,
+                force the annotation left, and vice versa.
+
+                If there is no secondary point, use
+                whichever side has more room.
+              -->
+              {@const placeOnLeft =
+                secondaryPoint
+                  ? secondaryPoint.value >=
+                    point.value
+                  : dotX >
+                    width / 2}
+
+              {@const rawAnnotationX =
+                placeOnLeft
+                  ? dotX -
+                    annotationWidth -
+                    annotationGap
+                  : dotX +
+                    annotationGap}
+
+              <!--
+                Prevent the callout from escaping
+                the chart bounds.
+              -->
+              {@const annotationX =
+                Math.max(
+                  margin.left,
+                  Math.min(
+                    rawAnnotationX,
+                    width -
+                      margin.right -
+                      annotationWidth
+                  )
+                )}
+
+              {@const annotationY =
+                dotY -
+                annotationHeight / 2}
+
+              <!-- Connector line -->
+              <line
+                class="
+                  headline-annotation-connector
+                "
+                x1={
+                  placeOnLeft
+                    ? dotX - 9
+                    : dotX + 9
+                }
+                x2={
+                  placeOnLeft
+                    ? annotationX +
+                      annotationWidth
+                    : annotationX
+                }
+                y1={dotY}
+                y2={dotY}
+                stroke={getHeadlineColour(
+                  point.headlineIndex
+                )}
+              />
+
+              <foreignObject
+                x={annotationX}
+                y={annotationY}
+                width={
+                  annotationWidth
+                }
+                height={
+                  annotationHeight
+                }
+                class="
+                  headline-annotation-object
+                "
+              >
+                <div
+                  xmlns="http://www.w3.org/1999/xhtml"
+                  class="
+                    headline-annotation
+                  "
+                  style:border-color={
+                    getHeadlineColour(
+                      point.headlineIndex
+                    )
+                  }
+                >
+                  {point.text}
+                </div>
+              </foreignObject>
+
+            {/if}
+
+          {/each}
+        </g>
+      {/if}
 
       <!-- Selectable cohort circles -->
+       {#if !isHeadlineView}
       <g class="cohort-dots">
         {#each orderedCohortPoints as point}
           {@const hidden =
@@ -1303,10 +1634,11 @@
           </circle>
         {/each}
       </g>
+      {/if}
 
 
       <!-- Selected values -->
-      {#if selectedSeries.length > 0}
+      {#if !isHeadlineView && selectedSeries.length > 0}
         <g
           class="selected-values"
           in:fade={{
@@ -1486,6 +1818,24 @@
     color: white;
   }
 
+  button.headline-tab {
+    border-color: #007da4;
+    background: #007da4;
+    color: white;
+    font-weight: 800;
+  }
+
+  .headline-tab:hover,
+  .headline-tab:focus-visible {
+    border-color: #05c690;
+  }
+
+  button.headline-tab.active {
+    border-color: #05c690;
+    background: #05c690;
+    color: white;
+  }
+
   .clear-button {
     justify-self: start;
 
@@ -1512,18 +1862,24 @@
     .inline-key {
     display: inline-flex;
     align-items: center;
-    gap: 0.28rem;
+    gap: 0.3rem;
 
-    margin-inline: 0.12rem;
     border-radius: 999px;
     padding: 0.08rem 0.42rem;
 
-    font-size: 0.78rem;
-    font-weight: 700;
-    line-height: 1.4;
+    /* font-size: 0.78rem;
+    font-weight: 700; */
 
     vertical-align: middle;
-    white-space: nowrap;
+    }
+
+    .average-marker-icon {
+      display: inline-block;
+      width: 2px;
+      height: 14px;
+      border-radius: 999px;
+      background: #111;
+      flex: 0 0 auto;
     }
 
     .inline-key img {
@@ -1950,6 +2306,84 @@
   opacity: 0.55;
 
   cursor: not-allowed;
+}
+
+/* ---------------------------------
+   Headline view
+   --------------------------------- */
+
+.headline-points,
+.headline-value-labels,
+.headline-cohort-labels,
+.headline-annotations {
+  pointer-events: none;
+}
+
+.headline-dot {
+  filter:
+    drop-shadow(
+      0 2px 3px
+      rgb(0 0 0 / 18%)
+    );
+}
+
+.headline-value-label {
+  font-size: 10px;
+  font-weight: 800;
+
+  paint-order: stroke;
+  stroke: white;
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+
+.headline-cohort-label {
+  font-size: 7px;
+  font-weight: 700;
+
+  paint-order: stroke;
+  stroke: white;
+  stroke-width: 2px;
+  stroke-linejoin: round;
+}
+
+.headline-annotation-connector {
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.headline-annotation-object {
+  overflow: visible;
+}
+
+.headline-annotation {
+  display: flex;
+  align-items: center;
+
+  width: 100%;
+  height: 100%;
+
+  box-sizing: border-box;
+
+  padding:
+    0.35rem
+    0.55rem;
+
+  border: 1px solid;
+  border-radius: 8px;
+
+  background:
+    rgb(255 255 255 / 96%);
+
+  color: #252a28;
+
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1.25;
+
+  box-shadow:
+    0 3px 8px
+    rgb(0 0 0 / 10%);
 }
 
 @media (max-width: 680px) {

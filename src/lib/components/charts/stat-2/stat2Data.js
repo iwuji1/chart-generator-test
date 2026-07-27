@@ -97,7 +97,9 @@ function splitTsvLine(line) {
 }
 
 function toPercentage(value) {
-  const cleanedValue = String(value ?? '')
+  const cleanedValue = String(
+    value ?? ''
+  )
     .trim()
     .replace('%', '');
 
@@ -115,7 +117,7 @@ function toPercentage(value) {
   }
 
   /*
-   * Supports both:
+   * Supports:
    * 61%  → 61
    * 0.61 → 61
    */
@@ -124,21 +126,24 @@ function toPercentage(value) {
     : Math.round(number);
 }
 
-function createSegmentValues(rowByColumn) {
+function createSegmentValues(
+  rowByColumn
+) {
   return Object.fromEntries(
     segments.map((segment) => {
-      const values = Object.fromEntries(
-        segmentOptions[segment]
-          .map((cohort) => [
-            cohort,
-            toPercentage(
-              rowByColumn[cohort]
+      const values =
+        Object.fromEntries(
+          segmentOptions[segment]
+            .map((cohort) => [
+              cohort,
+              toPercentage(
+                rowByColumn[cohort]
+              )
+            ])
+            .filter(([, value]) =>
+              Number.isFinite(value)
             )
-          ])
-          .filter(([, value]) =>
-            Number.isFinite(value)
-          )
-      );
+        );
 
       return [
         segment,
@@ -157,98 +162,263 @@ export function formatSubsegmentLabel(
     : subsegment;
 }
 
-export function parseStat1Data(
+/*
+ * Supports both "Key" and "Kay" in case
+ * the spreadsheet currently contains the typo.
+ */
+function getColumn(
+  row,
+  ...possibleNames
+) {
+  for (
+    const name of possibleNames
+  ) {
+    const value = row[name];
+
+    if (
+      value !== undefined &&
+      value !== null &&
+      String(value).trim() !== ''
+    ) {
+      return value;
+    }
+  }
+
+  return '';
+}
+
+function createHeadlineStats(
+  rowByColumn
+) {
+  const headlines = [];
+
+  const firstValue =
+    toPercentage(
+      getColumn(
+        rowByColumn,
+        'Key Stat 1 Value'
+      )
+    );
+
+  const firstCohort =
+    String(
+      getColumn(
+        rowByColumn,
+        'Key Stat 1 Who',
+        'Kay Stat 1 Who'
+      )
+    ).trim();
+
+  if (
+    Number.isFinite(firstValue) &&
+    firstCohort
+  ) {
+    headlines.push({
+      index: 0,
+      value: firstValue,
+      cohort: firstCohort
+    });
+  }
+
+  const secondValue =
+    toPercentage(
+      getColumn(
+        rowByColumn,
+        'Key Stat 2 Value'
+      )
+    );
+
+  const secondCohort =
+    String(
+      getColumn(
+        rowByColumn,
+        'Key Stat 2 Who',
+        'Kay Stat 2 Who'
+      )
+    ).trim();
+
+  if (
+    Number.isFinite(secondValue) &&
+    secondCohort
+  ) {
+    headlines.push({
+      index: 1,
+      value: secondValue,
+      cohort: secondCohort
+    });
+  }
+
+  return headlines;
+}
+
+export function parseStat2Data(
   tsv = rawData
 ) {
   const lines = tsv
     .split(/\r?\n/)
-    .map((line) => line.trimEnd())
+    .map((line) =>
+      line.trimEnd()
+    )
     .filter(Boolean);
 
   /*
-   * The first row contains the broad segment names.
-   * The second row contains the actual column names.
+   * New files have a broad grouping row first,
+   * followed by the actual column names.
+   *
+   * Rather than assuming the row starts with
+   * "Measure", find the row containing the
+   * required columns.
    */
   const columnHeaderIndex =
-    lines.findIndex((line) =>
-      line.startsWith('Measure\t')
-    );
+    lines.findIndex((line) => {
+      const cells =
+        splitTsvLine(line);
+
+      return (
+        cells.includes('Measure') &&
+        cells.includes('TOTAL')
+      );
+    });
 
   if (columnHeaderIndex === -1) {
     throw new Error(
-      'Could not find the stat_1.tsv column header.'
+      'Could not find the stat_2.tsv column header.'
     );
   }
 
-  const rawColumns = splitTsvLine(
-    lines[columnHeaderIndex]
-  );
+  const rawColumns =
+    splitTsvLine(
+      lines[columnHeaderIndex]
+    );
 
   /*
-   * Both Business Unit and Industry contain a
-   * column named "Other". Rename the second one.
+   * Business Unit and Industry both contain
+   * "Other".
+   *
+   * Keep the first as "Other", rename the
+   * subsequent one for Industry.
    */
-  const duplicateCounts = new Map();
+  const duplicateCounts =
+    new Map();
 
-  const columns = rawColumns.map(
-    (column) => {
-      const count =
-        duplicateCounts.get(column) ?? 0;
+  const columns =
+    rawColumns.map(
+      (column) => {
+        const count =
+          duplicateCounts.get(
+            column
+          ) ?? 0;
 
-      duplicateCounts.set(
-        column,
-        count + 1
-      );
-
-      if (
-        column !== 'Other' ||
-        count === 0
-      ) {
-        return column;
-      }
-
-      return 'Industry — Other';
-    }
-  );
-
-  return lines
-    .slice(columnHeaderIndex + 1)
-    .map(splitTsvLine)
-    .map((cells, rowIndex) => {
-      const rowByColumn =
-        Object.fromEntries(
-          columns.map(
-            (column, columnIndex) => [
-              column,
-              cells[columnIndex] ?? ''
-            ]
-          )
+        duplicateCounts.set(
+          column,
+          count + 1
         );
 
-      return {
-        id: `stat-1-${rowIndex}`,
-        measure:
-          rowByColumn.Measure?.trim(),
+        if (
+          column !== 'Other' ||
+          count === 0
+        ) {
+          return column;
+        }
 
-        total: toPercentage(
-          rowByColumn.ALL
-        ),
+        return 'Industry — Other';
+      }
+    );
 
-        segments:
-          createSegmentValues(
+  return lines
+    .slice(
+      columnHeaderIndex + 1
+    )
+    .map(splitTsvLine)
+    .map(
+      (
+        cells,
+        rowIndex
+      ) => {
+        const rowByColumn =
+          Object.fromEntries(
+            columns.map(
+              (
+                column,
+                columnIndex
+              ) => [
+                column,
+                cells[
+                  columnIndex
+                ] ?? ''
+              ]
+            )
+          );
+
+        const total =
+          toPercentage(
+            /*
+             * New dataset uses TOTAL.
+             * ALL fallback keeps this compatible
+             * with older versions.
+             */
+            rowByColumn.TOTAL ??
+              rowByColumn.ALL
+          );
+
+        const headlineText =
+          String(
+            getColumn(
+              rowByColumn,
+              'Just sharing the text these selections are based on'
+            )
+          ).trim();
+
+        return {
+          id:
+            `stat-2-${rowIndex}`,
+
+          reportSection:
             rowByColumn
-          )
-      };
-    })
+              .ReportSection ??
+            '',
+
+          order:
+            rowByColumn.Order ??
+            '',
+
+          subHeading:
+            rowByColumn[
+              'Sub-Heading'
+            ]?.trim() ?? '',
+
+          measure:
+            rowByColumn
+              .Measure
+              ?.trim(),
+
+          total,
+
+          headlineText,
+
+          headlines:
+            createHeadlineStats(
+              rowByColumn
+            ),
+
+          segments:
+            createSegmentValues(
+              rowByColumn
+            )
+        };
+      }
+    )
     .filter(
       (row) =>
         row.measure &&
-        Number.isFinite(row.total)
+        Number.isFinite(
+          row.total
+        )
     );
 }
 
 export const SourceData =
-  parseStat1Data();
+  parseStat2Data();
 
 export function createLongData(
   sourceData = SourceData,
@@ -262,28 +432,51 @@ export function createLongData(
         ] ?? {};
 
       const totalPoint = {
-        id: `${row.id}-total`,
-        measure: row.measure,
+        id:
+          `${row.id}-total`,
+
+        measure:
+          row.measure,
+
         rowIndex,
-        segment: activeSegment,
-        cohort: 'Total',
-        value: row.total
+
+        segment:
+          activeSegment,
+
+        cohort:
+          'Total',
+
+        value:
+          row.total
       };
 
       const cohortPoints =
-        Object.entries(cohortValues)
-          .map(([cohort, value]) => ({
-            id:
-              `${row.id}-${activeSegment}-${cohort}`,
+        Object.entries(
+          cohortValues
+        )
+          .map(
+            ([cohort, value]) => ({
+              id:
+                `${row.id}-${activeSegment}-${cohort}`,
 
-            measure: row.measure,
-            rowIndex,
-            segment: activeSegment,
-            cohort,
-            value: Number(value)
-          }))
+              measure:
+                row.measure,
+
+              rowIndex,
+
+              segment:
+                activeSegment,
+
+              cohort,
+
+              value:
+                Number(value)
+            })
+          )
           .filter((point) =>
-            Number.isFinite(point.value)
+            Number.isFinite(
+              point.value
+            )
           );
 
       return [
