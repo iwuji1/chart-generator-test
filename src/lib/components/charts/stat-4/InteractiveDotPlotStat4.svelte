@@ -1186,7 +1186,6 @@
 
           <button
             type="button"
-            class="headline-tab"
             class:active={
               isHeadlineView
             }

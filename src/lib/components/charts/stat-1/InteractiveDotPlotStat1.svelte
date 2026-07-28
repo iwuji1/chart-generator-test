@@ -176,9 +176,17 @@ const headlinePoints =
    */
   const minimumSvgWidth = 760;
 
+  const isMobile = $derived(
+    containerWidth <= 680
+  );
+
   const width = $derived(
-    Math.max(
-      minimumSvgWidth,
+    isMobile
+    ? Math.max(
+      280,
+      containerWidth
+    )
+    : Math.max( 760,
       Math.min(
         900,
         containerWidth
@@ -186,25 +194,60 @@ const headlinePoints =
     )
   );
 
-  const margin = {
-    top: 72,
+  const margin = $derived(
+    isMobile
+    ? {
+      top: 70,
+      right: 18,
+      bottom: 46,
+      left: 18
+    }
+    : {
+      top: 72,
     right: 32,
     bottom: 58,
     left: 32
-  };
+    }
+    
+  );
 
   /*
    * Reserve room above each row for its statement.
    */
-  const rowHeight = 65;
+  const rowHeight = $derived(
+  isMobile
+    ? 88
+    : 65
+);
+
+const measureLabelHeight =
+  $derived(
+    isMobile
+      ? 58
+      : 38
+  );
+
+const measureLabelOffset =
+  $derived(
+    isMobile
+      ? 78
+      : 62
+  );
+
+const rowPlotOffset =
+  $derived(
+    isMobile
+      ? 50
+      : 38
+  );
 
   function getRowY(rowIndex) {
-    return (
-      margin.top +
-      rowIndex * rowHeight +
-      38
-    );
-  }
+  return (
+    margin.top +
+    rowIndex * rowHeight +
+    rowPlotOffset
+  );
+}
 
   const plotBottom = $derived(
     sourceData.length > 0
@@ -228,14 +271,24 @@ const headlinePoints =
       ])
   );
 
-  const axisTicks = [
-    0,
-    20,
-    40,
-    60,
-    80,
-    100
-  ];
+  const axisTicks = $derived(
+    isMobile 
+      ? [
+          0,
+          25,
+          50,
+          75,
+          100
+        ]
+      : [
+          0,
+          20,
+          40,
+          60,
+          80,
+          100
+        ]
+  );
 
   /*
    * Comparison colours are assigned according to
@@ -844,7 +897,6 @@ const headlinePoints =
           >
             <button
               type="button"
-              class="headline-tab"
               class:active={
                 isHeadlineView
               }
@@ -1132,13 +1184,13 @@ const headlinePoints =
           <g class="statement-row">
             <foreignObject
               x={margin.left}
-              y={rowY - 62}
+              y={rowY - measureLabelOffset}
               width={
                 width -
                 margin.left -
                 margin.right
               }
-              height="38"
+              height={measureLabelHeight}
             >
               <div
                 xmlns="http://www.w3.org/1999/xhtml"
@@ -1447,13 +1499,22 @@ const headlinePoints =
                 )}
 
               {@const annotationWidth =
-                215}
+                isMobile
+                  ? Math.min(
+                      150,
+                      width * 0.42
+                    )
+                  : 215}
 
               {@const annotationHeight =
-                42}
+                isMobile
+                  ? 54
+                  : 42}
 
               {@const annotationGap =
-                16}
+                isMobile
+                  ? 10
+                  : 16}
 
               <!--
                 If the secondary stat is on the right,
@@ -1723,6 +1784,18 @@ const headlinePoints =
     font-size: 0.85rem;
     line-height: 1.5;
   }
+  @media (max-width: 680px) {
+    .chart-heading h2 {
+      font-size: 1.15rem;
+      line-height: 1.15;
+    }
+
+    .chart-heading p {
+      font-size: 0.8rem;
+      line-height: 1.5;
+    }
+  }
+
 
   .sticky-controls {
     position: sticky;
@@ -1814,6 +1887,36 @@ const headlinePoints =
     background: #123f37;
     color: white;
   }
+
+  @media (max-width: 680px) {
+  .segment-selector {
+    flex-wrap: nowrap;
+
+    width: 100%;
+
+    overflow-x: auto;
+    overflow-y: hidden;
+
+    padding-bottom: 0.25rem;
+
+    overscroll-behavior-inline:
+      contain;
+
+    scrollbar-width: none;
+
+    -webkit-overflow-scrolling:
+      touch;
+  }
+
+  .segment-selector::-webkit-scrollbar {
+    display: none;
+  }
+
+  .segment-selector button {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+}
 
   button.headline-tab {
     border-color: #8e9995;
@@ -1939,21 +2042,33 @@ const headlinePoints =
   .chart-wrapper {
     width: 100%;
     min-width: 0;
+
     overflow-x: auto;
 
     overscroll-behavior-inline:
       contain;
   }
 
+  @media (max-width: 680px) {
+    .chart-wrapper {
+      overflow-x: visible;
+    }
+  }
+
   svg {
     display: block;
 
     width: 100%;
-    min-width: 760px;
     height: auto;
 
     overflow: visible;
     background: white;
+  }
+
+  @media (min-width: 681px) {
+    svg {
+      min-width: 760px;
+    }
   }
 
   .axis-title {
@@ -2000,6 +2115,15 @@ const headlinePoints =
     line-height: 1.25;
 
     text-transform: none;
+  }
+
+  @media (max-width: 680px) {
+    .measure-label {
+      align-items: flex-end;
+
+      font-size: 11px;
+      line-height: 1.3;
+    }
   }
 
   .row-guide {
@@ -2125,13 +2249,13 @@ const headlinePoints =
 }
 
 .select-label-1 {
+  width: fit-content;
   color: #ffffff;
   font-weight: 700;
   font-size: 0.68rem;
   font-weight: 800;
   letter-spacing: 0.06em;
   background: #05c690;
-  width: 30%;
 
 }
 .select-label-2 {
@@ -2141,7 +2265,7 @@ const headlinePoints =
   font-weight: 800;
   letter-spacing: 0.06em;
   background: #007da4;
-  width: 25%;
+  width: fit-content;
 }
 
 .select-field select {
@@ -2316,6 +2440,22 @@ const headlinePoints =
   pointer-events: none;
 }
 
+@media (max-width: 680px) {
+  .headline-annotation {
+    padding:
+      0.3rem
+      0.4rem;
+
+    font-size: 7.5px;
+    line-height: 1.2;
+
+    border-radius: 6px;
+
+    box-shadow:
+      0 2px 5px
+      rgb(0 0 0 / 9%);
+  }
+}
 .headline-dot {
   filter:
     drop-shadow(
@@ -2384,19 +2524,123 @@ const headlinePoints =
 }
 
 @media (max-width: 680px) {
+
+  .dot-plot-stat-1 {
+    width: 100%;
+  }
+
+
+  /* Heading */
+
+  .chart-heading h2 {
+    font-size: 1.15rem;
+    line-height: 1.15;
+  }
+
+  .chart-heading p {
+    font-size: 0.8rem;
+    line-height: 1.5;
+  }
+
+
+  /* Controls */
+
+  .sticky-controls {
+    position: static;
+
+    margin-bottom: 1rem;
+    padding: 0.8rem;
+
+    border-radius: 0.75rem;
+
+    backdrop-filter: none;
+    -webkit-backdrop-filter:
+      none;
+  }
+
+  .controls {
+    gap: 0.85rem;
+  }
+
+
+  /* Horizontally scrolling view tabs */
+
+  .segment-selector {
+    flex-wrap: nowrap;
+
+    width: 100%;
+
+    overflow-x: auto;
+    overflow-y: hidden;
+
+    padding-bottom: 0.25rem;
+
+    overscroll-behavior-inline:
+      contain;
+
+    scrollbar-width: none;
+
+    -webkit-overflow-scrolling:
+      touch;
+  }
+
+  .segment-selector::-webkit-scrollbar {
+    display: none;
+  }
+
+  .segment-selector button {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+
+  /* Stack highlight / compare */
+
   .comparison-selectors {
     grid-template-columns:
       minmax(0, 1fr);
+
+    gap: 0.9rem;
   }
-}
 
-  @media (max-width: 680px) {
-    .sticky-controls {
-      position: static;
 
-      backdrop-filter: none;
-      -webkit-backdrop-filter:
-        none;
-    }
+  /* Chart fits viewport */
+
+  .chart-wrapper {
+    overflow-x: visible;
+  }
+
+  svg {
+    min-width: 0;
+    width: 100%;
+  }
+
+
+  /* More room for wrapped statements */
+
+  .measure-label {
+    align-items: flex-end;
+
+    font-size: 11px;
+    line-height: 1.3;
+  }
+
+
+  /* Slightly smaller annotation */
+
+  .headline-annotation {
+    padding:
+      0.3rem
+      0.4rem;
+
+    font-size: 7.5px;
+    line-height: 1.2;
+
+    border-radius: 6px;
+
+    box-shadow:
+      0 2px 5px
+      rgb(0 0 0 / 9%);
+  }
   }
 </style>

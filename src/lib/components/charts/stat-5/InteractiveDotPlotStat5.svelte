@@ -844,7 +844,6 @@ const headlinePoints =
           >
             <button
               type="button"
-              class="headline-tab"
               class:active={
                 isHeadlineView
               }
@@ -2131,7 +2130,7 @@ const headlinePoints =
   font-weight: 800;
   letter-spacing: 0.06em;
   background: #05c690;
-  width: 30%;
+  width: fit-content;
 
 }
 .select-label-2 {
@@ -2141,7 +2140,7 @@ const headlinePoints =
   font-weight: 800;
   letter-spacing: 0.06em;
   background: #007da4;
-  width: 25%;
+  width: fit-content;
 }
 
 .select-field select {
