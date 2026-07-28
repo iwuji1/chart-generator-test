@@ -4,7 +4,7 @@ export const segments = [
   'Job Level',
   'Industry',
   'Age Generation',
-  'Work Location'
+  'Country'
 ];
 
 export const segmentOptions = {
@@ -17,40 +17,22 @@ export const segmentOptions = {
     'Individual Contributor'
   ],
 
-  'Business Unit': [
-    'Accounting and Finance',
-    'Corporate Management',
-    'Customer Service',
-    'Human Resources',
-    'Information Technology',
-    'Marketing and Advertising',
-    'Operations',
-    'Production',
-    'Purchasing',
-    'Research and Development',
-    'Sales',
-    'Other'
-  ],
-
   Industry: [
-    'Technology',
-    'Not for profit',
+    'Communications Services',
+    'Consumer Markets',
     'Media and Entertainment',
-    'Retail',
-    'Sports',
-    'Travel, Hospitality and Leisure',
-    'Healthcare',
-    'Life Sciences',
-    'Financial Services',
-    'Industrial',
-    'Clean Technology',
-    'Government',
     'Energy',
-    'Telecommunications',
+    'Financial Services',
+    'Government',
+    'Healthcare',
+    'Industrial',
+    'Life Sciences',
+    'Industrial',
+    'Not for profit',
     'Professional Services',
-    'Consumer Goods',
-    'Utility',
-    'Industry — Other'
+    'Sports',
+    'Technology',
+    'Utility'
   ],
 
   'Age Generation': [
@@ -60,20 +42,7 @@ export const segmentOptions = {
     'Baby Boomers'
   ],
 
-  'No. Of Employees': [
-    '1 - 50',
-    '51 - 500',
-    '501 - 5,000',
-    '5,001 -  50,000',
-    '50,001 - 100,000',
-    '100,001 - 200,000',
-    '200,001 - 300,000',
-    '300,001 - 400,000',
-    '400,001 - 500,000',
-    'Over 500,000'
-  ],
-
-  'Work Location': [
+  'Country': [
     'USA',
     'UK',
     'France',

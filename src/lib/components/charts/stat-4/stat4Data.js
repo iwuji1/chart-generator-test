@@ -4,7 +4,7 @@ export const segments = [
   'Job Level',
   'Industry',
   'Age Generation',
-  'Work Location'
+  'Country'
 ];
 
 export const segmentOptions = {
@@ -18,24 +18,21 @@ export const segmentOptions = {
   ],
 
   Industry: [
-    'Technology',
-    'Not for profit',
+    'Communications Services',
+    'Consumer Markets',
     'Media and Entertainment',
-    'Retail',
-    'Sports',
-    'Travel, Hospitality and Leisure',
-    'Healthcare',
-    'Life Sciences',
-    'Financial Services',
-    'Industrial',
-    'Clean Technology',
-    'Government',
     'Energy',
-    'Telecommunications',
+    'Financial Services',
+    'Government',
+    'Healthcare',
+    'Industrial',
+    'Life Sciences',
+    'Industrial',
+    'Not for profit',
     'Professional Services',
-    'Consumer Goods',
-    'Utility',
-    'Other'
+    'Sports',
+    'Technology',
+    'Utility'
   ],
 
   'Age Generation': [
@@ -45,7 +42,7 @@ export const segmentOptions = {
     'Baby Boomers'
   ],
 
-  'Work Location': [
+  'Country': [
     'USA',
     'UK',
     'France',
