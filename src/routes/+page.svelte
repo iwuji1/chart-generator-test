@@ -5,6 +5,7 @@
   import Stat4 from '$lib/components/charts/stat-4/InteractiveDotPlotStat4.svelte';
   import Stat5 from '$lib/components/charts/stat-5/InteractiveDotPlotStat5.svelte';
   import Stat6 from '$lib/components/charts/stat-6/InteractiveDotPlotStat6.svelte';
+  import StatMotivation from '$lib/components/charts/stat-motivation/InteractiveMotivationChart.svelte'
 
   const charts = [
     {
@@ -30,6 +31,10 @@
     {
       title: 'Stat 6',
       chart: Stat6
+    },
+    {
+      title: 'Stat Motivation',
+      chart: StatMotivation
     }
   ];
 
