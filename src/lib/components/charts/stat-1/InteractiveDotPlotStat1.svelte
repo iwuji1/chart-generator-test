@@ -1321,14 +1321,14 @@ const rowPlotOffset =
         aria-hidden="true"
       >
         {#each totalPoints as point}
-        <text
+        <!-- <text
           class="avg-value"
           x={xScale(point.value)}
           y={getRowY(point.rowIndex) - 16}
           text-anchor="middle"
           >
           {point.value}<tspan font-size= "7" baseline-shift="super">%</tspan>
-        </text>
+        </text> -->
           <line
             class="total-marker-outline"
             x1={xScale(point.value)}
