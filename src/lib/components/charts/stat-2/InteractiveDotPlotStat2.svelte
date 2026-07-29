@@ -795,7 +795,7 @@ const headlinePoints =
 <section class="dot-plot-stat-1">
   <div class="chart-heading">
     <h2>
-      STAT 2: How employees React to the use of AI
+      How employees React to the use of AI
     </h2>
 
 <p class="chart-explanation">
@@ -840,7 +840,6 @@ const headlinePoints =
           <div
             class="segment-selector"
             role="group"
-            aria-label="Select chart view"
           >
             <button
               type="button"
@@ -854,7 +853,7 @@ const headlinePoints =
                 selectHeadlineView
               }
             >
-              Headline
+              Global Average
             </button>
 
             {#each segments as segment}
@@ -1582,7 +1581,6 @@ const headlinePoints =
             role="button"
             tabindex={hidden ? -1 : 0}
             aria-hidden={hidden}
-            aria-label={`${point.cohort}: ${point.value}% — ${point.measure}`}
             aria-pressed={
               isSelected(
                 point.cohort

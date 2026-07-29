@@ -15,9 +15,6 @@
     segmentOptions
   } from './stat1Data_v2.js';
 
-  import circleIcon from '$lib/assets/icons/circle.svg'
-  import lineIcon from '$lib/assets/icons/line.svg'
-
 
   let {
     sourceData = SourceData,
@@ -39,18 +36,7 @@
   const highlightedGroup = $derived(
     selectedCohorts[0] ?? ''
     );
-    
-    const comparisonGroup = $derived(
-        selectedCohorts[1] ?? ''
-    );
 
-    const availableComparisonCohorts =
-    $derived(
-        cohorts.filter(
-        (cohort) =>
-            cohort !== highlightedGroup
-        )
-    );
 
   let hoveredCohort = $state(null);
   let hoveredPoint = $state(null);
@@ -89,35 +75,17 @@
     return [...cohortPoints].sort(
       (a, b) => {
         const aSelected =
-          selectedCohorts.indexOf(
+          selectedCohorts.includes(
             a.cohort
           );
 
         const bSelected =
-          selectedCohorts.indexOf(
+          selectedCohorts.includes(
             b.cohort
           );
 
-        /*
-        * Unselected first.
-        */
-        const aPriority =
-          aSelected === -1
-            ? 0
-            : aSelected === 1
-              ? 1
-              : 2;
-
-        const bPriority =
-          bSelected === -1
-            ? 0
-            : bSelected === 1
-              ? 1
-              : 2;
-
         return (
-          aPriority -
-          bPriority
+          Number(aSelected) - Number(bSelected)
         );
       }
     );
@@ -166,6 +134,22 @@ const headlinePoints =
           }));
       }
     );
+  });
+
+  const selectedLinePath =
+  $derived.by(() => {
+    if (
+      selectedSeries.length !== 1
+    ) {
+      return null;
+    }
+
+    const points =
+      selectedSeries[0].points;
+
+    return points.length > 1
+      ? lineGenerator(points)
+      : null;
   });
 
   /*
@@ -447,51 +431,6 @@ const rowPlotOffset =
    * One horizontal comparison line is drawn on each
    * row when exactly two cohorts are selected.
    */
-  const comparisonRows = $derived.by(() => {
-    if (selectedSeries.length !== 2) {
-      return [];
-    }
-
-    const [
-      firstSeries,
-      secondSeries
-    ] = selectedSeries;
-
-    return sourceData
-      .map((row, rowIndex) => {
-        const firstPoint =
-          firstSeries.points.find(
-            (point) =>
-              point.rowIndex ===
-              rowIndex
-          );
-
-        const secondPoint =
-          secondSeries.points.find(
-            (point) =>
-              point.rowIndex ===
-              rowIndex
-          );
-
-        if (
-          !firstPoint ||
-          !secondPoint
-        ) {
-          return null;
-        }
-
-        return {
-          rowIndex,
-          firstCohort:
-            firstSeries.cohort,
-          secondCohort:
-            secondSeries.cohort,
-          firstPoint,
-          secondPoint
-        };
-      })
-      .filter(Boolean);
-  });
 
   function selectSegment(segment) {
     selectedView = 'explore';
@@ -514,39 +453,12 @@ const rowPlotOffset =
   }
 
   function selectCohort(cohort) {
-    const selectedIndex =
-      selectedCohorts.indexOf(
-        cohort
-      );
-
     /*
-    * Clicking comparison removes comparison only.
-    */
-    if (selectedIndex === 1) {
-      selectedCohorts = [
-        selectedCohorts[0]
-      ];
-
-      return;
-    }
-
-    /*
-    * Highlight cannot be removed while a
-    * comparison is active.
-    */
+   * Clicking the currently selected cohort
+   * deselects it.
+   */
     if (
-      selectedIndex === 0 &&
-      selectedCohorts.length === 2
-    ) {
-      return;
-    }
-
-    /*
-    * Clicking the sole highlighted cohort clears it.
-    */
-    if (
-      selectedIndex === 0 &&
-      selectedCohorts.length === 1
+      selectedCohorts[0] === cohort
     ) {
       selectedCohorts = [];
 
@@ -554,37 +466,11 @@ const rowPlotOffset =
     }
 
     /*
-    * Nothing selected → highlight.
-    */
-    if (
-      selectedCohorts.length === 0
-    ) {
-      selectedCohorts = [
-        cohort
-      ];
-
-      return;
-    }
-
-    /*
-    * Highlight exists → add comparison.
-    */
-    if (
-      selectedCohorts.length === 1
-    ) {
-      selectedCohorts = [
-        selectedCohorts[0],
-        cohort
-      ];
-
-      return;
-    }
-
-    /*
-    * Both exist → replace comparison.
+    * Only one cohort can ever be selected.
+    * Selecting another simply replaces the
+    * current selection.
     */
     selectedCohorts = [
-      selectedCohorts[0],
       cohort
     ];
   }
@@ -607,26 +493,6 @@ const rowPlotOffset =
     selectedCohorts = [];
     hoveredCohort = null;
     hoveredPoint = null;
-  }
-
-  function clearComparisonGroup() {
-    if (!highlightedGroup) return;
-
-    selectedCohorts = [
-      highlightedGroup
-    ];
-
-    hoveredPoint = null;
-    hoveredCohort = null;
-  }
-
-  function clearHighlightedGroup() {
-    if (comparisonGroup) return;
-
-    selectedCohorts = [];
-
-    hoveredPoint = null;
-    hoveredCohort = null;
   }
 
 
@@ -679,82 +545,6 @@ const rowPlotOffset =
     );
   }
 
-  function selectHighlightedGroup(
-    event
-    ) {
-    const cohort =
-        event.currentTarget.value;
-
-    hoveredPoint = null;
-    hoveredCohort = null;
-
-    if (!cohort) {
-        selectedCohorts = [];
-        return;
-    }
-
-    /*
-    * Preserve the current comparison cohort where
-    * possible, unless it matches the new highlighted
-    * cohort.
-    */
-    const existingComparison =
-        selectedCohorts[1];
-
-    selectedCohorts =
-        existingComparison &&
-        existingComparison !== cohort
-        ? [
-            cohort,
-            existingComparison
-            ]
-        : [cohort];
-    }
-
-    function selectComparisonGroup(
-        event
-    ) {
-    const cohort =
-        event.currentTarget.value;
-
-    hoveredPoint = null;
-    hoveredCohort = null;
-
-    if (!highlightedGroup) {
-        selectedCohorts = [];
-        return;
-    }
-
-    if (!cohort) {
-        selectedCohorts = [
-        highlightedGroup
-        ];
-
-        return;
-    }
-
-    selectedCohorts = [
-        highlightedGroup,
-        cohort
-    ];
-    }
-
-    function previewSelectOption(
-        event
-    ) {
-    const cohort =
-        event.currentTarget.value;
-
-    hoveredCohort =
-        cohort || null;
-    }
-
-    function clearSelectPreview() {
-        if (!hoveredPoint) {
-            hoveredCohort = null;
-        }
-    }
-
   function isHovered(cohort) {
     return (
       hoveredCohort === cohort
@@ -793,37 +583,15 @@ const rowPlotOffset =
     ) {
       return 0.5;
     }
-
-    if (
-      selectedCohorts.length === 1
-    ) {
-      return isSelected(cohort)
-        ? 1
-        : 0.35;
-    }
-
     return isSelected(cohort)
       ? 1
-      : 0;
-  }
-
-  function isDotHidden(cohort) {
-    return (
-      selectedCohorts.length === 2 &&
-      !isSelected(cohort)
-    );
+      : 0.35;
   }
 
   function getDotRadius(cohort) {
     return isHighlighted(cohort)
       ? 9
       : 6;
-  }
-
-  function getGradientId(rowIndex) {
-    return (
-      `stat-1-comparison-gradient-${rowIndex}`
-    );
   }
 
   function getLabelY(
@@ -840,7 +608,7 @@ const rowPlotOffset =
      * first above the row and the second beneath it.
      */
     return selectionIndex === 0
-      ? getRowY(point.rowIndex) - 13
+      ? getRowY(point.rowIndex) + 23
       : getRowY(point.rowIndex) + 23;
   }
 </script>
@@ -848,7 +616,7 @@ const rowPlotOffset =
 <section class="dot-plot-stat-1">
   <div class="chart-heading">
     <h2>
-      STAT 1: Employee Workload and capabilities - v2
+      Employee Workload and capabilities - v2
     </h2>
 
 <p class="chart-explanation">
@@ -965,39 +733,6 @@ const rowPlotOffset =
         {/if}
       </desc>
 
-      <!-- <defs>
-        {#each comparisonRows as comparison}
-          <linearGradient
-            id={getGradientId(
-              comparison.rowIndex
-            )}
-            gradientUnits="userSpaceOnUse"
-            x1={xScale(
-              comparison.firstPoint.value
-            )}
-            x2={xScale(
-              comparison.secondPoint.value
-            )}
-            y1="0"
-            y2="0"
-          >
-            <stop
-              offset="0%"
-              stop-color={getCohortColour(
-                comparison.firstCohort
-              )}
-            />
-
-            <stop
-              offset="100%"
-              stop-color={getCohortColour(
-                comparison.secondCohort
-              )}
-            />
-          </linearGradient>
-        {/each}
-      </defs> -->
-
       <!-- Percentage axis -->
       <g
         class="axis"
@@ -1107,61 +842,13 @@ const rowPlotOffset =
         {/each}
       </g>
 
-      <!-- Two-cohort comparison lines -->
-      {#if !isHeadlineView && comparisonRows.length > 0}
-        <g class="comparison-lines">
-          {#each comparisonRows as comparison}
-            <line
-              class="comparison-line-outline"
-              x1={xScale(
-                comparison.firstPoint.value
-              )}
-              x2={xScale(
-                comparison.secondPoint.value
-              )}
-              y1={getRowY(
-                comparison.rowIndex
-              )}
-              y2={getRowY(
-                comparison.rowIndex
-              )}
-            />
-
-            <line
-              class="comparison-line"
-              x1={xScale(
-                comparison.firstPoint.value
-              )}
-              x2={xScale(
-                comparison.secondPoint.value
-              )}
-              y1={getRowY(
-                comparison.rowIndex
-              )}
-              y2={getRowY(
-                comparison.rowIndex
-              )}
-              stroke={`url(#${getGradientId(
-                comparison.rowIndex
-              )})`}
-              in:draw={{
-                duration: 300
-              }}
-              out:fade={{
-                duration: 100
-              }}
-            />
-          {/each}
-        </g>
-      {/if}
-
       <!-- Hover connection -->
       {#if
         !isHeadlineView &&
         hoverLinePath &&
         hoveredCohort &&
-        selectedCohorts.length === 0
-        && highlightedGroup
+        selectedCohorts.length === 0 &&
+        highlightedGroup
       }
         <g
           class="hover-line-group"
@@ -1182,6 +869,38 @@ const rowPlotOffset =
             d={hoverLinePath}
             stroke={getCohortColour(
               hoveredCohort
+            )}
+            in:draw={{
+              duration: 300
+            }}
+          />
+        </g>
+      {/if}
+
+      {#if
+        !isHeadlineView &&
+        selectedLinePath &&
+        highlightedGroup
+      }
+        <g
+          class="selected-line-group"
+          in:fade={{
+            duration: 100
+          }}
+          out:fade={{
+            duration: 80
+          }}
+        >
+          <path
+            class="hover-line-outline"
+            d={selectedLinePath}
+          />
+
+          <path
+            class="hover-line"
+            d={selectedLinePath}
+            stroke={getCohortColour(
+              highlightedGroup
             )}
             in:draw={{
               duration: 300
@@ -1347,8 +1066,6 @@ const rowPlotOffset =
        {#if !isHeadlineView && highlightedGroup}
       <g class="cohort-dots">
         {#each orderedCohortPoints as point}
-          {@const hidden =
-            isDotHidden(point.cohort)}
 
           <circle
             class="dot"
@@ -1357,7 +1074,6 @@ const rowPlotOffset =
                 point.cohort
               )
             }
-            class:hidden-dot={hidden}
             cx={xScale(point.value)}
             cy={getRowY(
               point.rowIndex
@@ -1375,9 +1091,7 @@ const rowPlotOffset =
               point.cohort
             )}
             role="button"
-            tabindex={hidden ? -1 : 0}
-            aria-hidden={hidden}
-            aria-label={`${point.cohort}: ${point.value}% — ${point.measure}`}
+            tabindex="0"
             aria-pressed={
               isSelected(
                 point.cohort
@@ -1651,39 +1365,6 @@ const rowPlotOffset =
   }
 }
 
-  button.headline-tab {
-    border-color: #8e9995;
-    background: #ffffff;
-    color: #000000;
-    font-weight: 800;
-  }
-
-  .headline-tab:hover,
-  .headline-tab:focus-visible {
-    border-color: #05c690;
-  }
-
-  button.headline-tab.active {
-    border-color: #123f37;
-    background: #123f37;
-    color: white;
-  }
-
-  .clear-button {
-    justify-self: start;
-
-    border: 1px solid #b9c0bd;
-    border-radius: 999px;
-    padding: 0.48rem 0.78rem;
-
-    background: white;
-    color: #252a28;
-
-    font: inherit;
-    font-size: 0.76rem;
-    cursor: pointer;
-  }
-
   .chart-explanation {
     max-width: 72ch;
     margin: 0;
@@ -1715,61 +1396,9 @@ const rowPlotOffset =
       flex: 0 0 auto;
     }
 
-    .inline-key img {
-    display: block;
-    width: 11px;
-    height: 11px;
-    flex: 0 0 auto;
-    }
-
-    .cohort-key {
-    background: #f0f2f1;
-    color: #343a37;
-    }
-
-    .range-key {
-    background: #d7d9d8;
-    color: #343a37;
-    }
-
-    .highlight-key {
-    background:
-        color-mix(
-        in srgb,
-        var(--highlight-colour) 14%,
-        white
-        );
-
-    color: #ffffff;
-    }
-
-    .compare-key {
-    background:
-        color-mix(
-        in srgb,
-        var(--compare-colour) 14%,
-        white
-        );
-
-    color: #ffffff;
-    }
-
     .average-key {
     background: #f0f2f1;
     color: #222624;
-    }
-
-    .average-key img {
-    width: 3px;
-    height: 14px;
-    object-fit: fill;
-    }
-
-    .colour-dot {
-    width: 9px;
-    height: 9px;
-    flex: 0 0 auto;
-    border-radius: 50%;
     }
 
   .chart-wrapper {
@@ -1864,25 +1493,6 @@ const rowPlotOffset =
     stroke-width: 1;
   }
 
-  .range-line {
-    stroke: #d7d9d8;
-    stroke-width: 14;
-    stroke-linecap: round;
-  }
-
-  .comparison-line-outline {
-    stroke: white;
-    stroke-width: 19;
-    stroke-linecap: round;
-  }
-
-  .comparison-line {
-    stroke-width: 14;
-    stroke-linecap: round;
-
-    pointer-events: none;
-  }
-
   .hover-line,
   .hover-line-outline {
     fill: none;
@@ -1928,10 +1538,6 @@ const rowPlotOffset =
       );
   }
 
-  .hidden-dot {
-    pointer-events: none;
-  }
-
   .total-markers {
     pointer-events: none;
   }
@@ -1965,203 +1571,6 @@ const rowPlotOffset =
     stroke-linejoin: round;
   }
 
-  .comparison-selectors {
-  display: grid;
-  grid-template-columns:
-    repeat(
-      2,
-      minmax(0, 1fr)
-    );
-  gap: 0.75rem;
-}
-
-.select-field {
-  display: grid;
-  gap: 0.35rem;
-  min-width: 0;
-}
-
-.select-label-1 {
-  width: fit-content;
-  color: #ffffff;
-  font-weight: 700;
-  font-size: 0.68rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  background: #05c690;
-
-}
-.select-label-2 {
-  color: #ffffff;
-  font-weight: 700;
-  font-size: 0.68rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  background: #007da4;
-  width: fit-content;
-}
-
-.select-field select {
-  width: 100%;
-  min-width: 0;
-
-  border: 1px solid #cbd1ce;
-  border-radius: 0.65rem;
-  padding: 0.65rem 2.25rem 0.65rem
-    0.75rem;
-
-  background-color: white;
-  color: #202422;
-
-  font: inherit;
-  font-size: 0.82rem;
-  font-weight: 600;
-
-  cursor: pointer;
-}
-
-.select-field select:hover {
-  border-color: #89938f;
-}
-
-.select-field select:focus-visible {
-  border-color: #123f37;
-  outline:
-    2px solid
-    rgb(18 63 55 / 20%);
-  outline-offset: 2px;
-}
-
-.select-field select:disabled {
-  background: #f2f4f3;
-  color: #929995;
-  cursor: not-allowed;
-}
-
-.disabled-field .select-label {
-  color: #929995;
-}
-
-.selection-summary {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-
-  margin-top: 0.7rem;
-}
-
-.selection-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-
-  border-radius: 999px;
-  padding: 0.3rem 0.55rem;
-
-  background: #f2f4f3;
-  color: #343936;
-
-  font-size: 0.74rem;
-  font-weight: 700;
-}
-
-.selection-dot {
-  width: 9px;
-  height: 9px;
-  flex: 0 0 auto;
-
-  border-radius: 50%;
-}
-
-.select-input-row {
-  display: grid;
-  grid-template-columns:
-    minmax(0, 1fr)
-    34px;
-  gap: 0.4rem;
-  align-items: center;
-
-  width: 100%;
-  min-width: 0;
-}
-
-.reset-selection {
-  display: grid;
-  place-items: center;
-
-  width: 34px;
-  height: 34px;
-
-  box-sizing: border-box;
-
-  border: 1px solid #cbd1ce;
-  border-radius: 50%;
-
-  background: white;
-
-  font: inherit;
-  font-size: 1.25rem;
-  font-weight: 400;
-  line-height: 1;
-
-  cursor: pointer;
-
-  transition:
-    background 150ms ease,
-    color 150ms ease,
-    border-color 150ms ease,
-    opacity 150ms ease,
-    transform 150ms ease;
-}
-
-.reset-selection span {
-  /*
-   * Optical correction for × glyph.
-   */
-  transform: translateY(-1px);
-}
-
-/* green highlight reset */
-.reset-highlight {
-  border-color: #05c690;
-  color: #05c690;
-}
-
-.reset-highlight:hover:not(:disabled) {
-  background: #05c690;
-  color: white;
-}
-
-/* blue comparison reset */
-.reset-compare {
-  border-color: #007da4;
-  color: #007da4;
-}
-
-.reset-compare:hover:not(:disabled) {
-  background: #007da4;
-  color: white;
-}
-
-.reset-selection:focus-visible {
-  outline: 2px solid currentColor;
-  outline-offset: 2px;
-}
-
-.reset-selection:active:not(:disabled) {
-  transform: scale(0.92);
-}
-
-.reset-selection:disabled {
-  border-color: #dfe3e1;
-  background: #f3f5f4;
-  color: #afb6b3;
-
-  opacity: 0.55;
-
-  cursor: not-allowed;
-}
-
 /* ---------------------------------
    Headline view
    --------------------------------- */
@@ -2169,26 +1578,6 @@ const rowPlotOffset =
 .headline-points,
 .headline-value-labels,
 .headline-cohort-labels,
-.headline-annotations {
-  pointer-events: none;
-}
-
-@media (max-width: 680px) {
-  .headline-annotation {
-    padding:
-      0.3rem
-      0.4rem;
-
-    font-size: 7.5px;
-    line-height: 1.2;
-
-    border-radius: 6px;
-
-    box-shadow:
-      0 2px 5px
-      rgb(0 0 0 / 9%);
-  }
-}
 .headline-dot {
   filter:
     drop-shadow(
@@ -2216,46 +1605,6 @@ const rowPlotOffset =
   stroke-width: 2px;
   stroke-linejoin: round;
 }
-
-.headline-annotation-connector {
-  stroke-width: 2;
-  stroke-linecap: round;
-}
-
-.headline-annotation-object {
-  overflow: visible;
-}
-
-.headline-annotation {
-  display: flex;
-  align-items: center;
-
-  width: 100%;
-  height: 100%;
-
-  box-sizing: border-box;
-
-  padding:
-    0.35rem
-    0.55rem;
-
-  border: 1px solid;
-  border-radius: 8px;
-
-  background:
-    rgb(255 255 255 / 96%);
-
-  color: #252a28;
-
-  font-size: 9px;
-  font-weight: 600;
-  line-height: 1.25;
-
-  box-shadow:
-    0 3px 8px
-    rgb(0 0 0 / 10%);
-}
-
 @media (max-width: 680px) {
 
   .dot-plot-stat-1 {
@@ -2327,15 +1676,6 @@ const rowPlotOffset =
   }
 
 
-  /* Stack highlight / compare */
-
-  .comparison-selectors {
-    grid-template-columns:
-      minmax(0, 1fr);
-
-    gap: 0.9rem;
-  }
-
 
   /* Chart fits viewport */
 
@@ -2361,19 +1701,5 @@ const rowPlotOffset =
 
   /* Slightly smaller annotation */
 
-  .headline-annotation {
-    padding:
-      0.3rem
-      0.4rem;
-
-    font-size: 7.5px;
-    line-height: 1.2;
-
-    border-radius: 6px;
-
-    box-shadow:
-      0 2px 5px
-      rgb(0 0 0 / 9%);
-  }
   }
 </style>

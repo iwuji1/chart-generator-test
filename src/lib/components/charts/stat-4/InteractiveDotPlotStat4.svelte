@@ -1131,7 +1131,7 @@
 
   <div class="chart-heading">
     <h2>
-      STAT 4: EMPLOYEE JOB PRIORITIES
+      EMPLOYEE JOB PRIORITIES
     </h2>
 
     <p class="chart-explanation">
@@ -1175,7 +1175,7 @@
       <div class="segment-control">
 
         <p class="control-label">
-          Select view
+          Global Average
         </p>
 
         <div
@@ -1937,12 +1937,6 @@
               aria-hidden={
                 hidden
               }
-
-              aria-label={`
-                ${point.cohort}:
-                ${point.value}% —
-                ${point.reason}
-              `}
 
               aria-pressed={
                 isSelected(

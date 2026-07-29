@@ -794,7 +794,7 @@ const headlinePoints =
 <section class="dot-plot-stat-1">
   <div class="chart-heading">
     <h2>
-      STAT 6: Speed vs Results
+      Speed vs Results
     </h2>
 
 <p class="chart-explanation">
@@ -834,7 +834,7 @@ const headlinePoints =
     <div class="controls">
       <div class="segment-control">
         <p class="control-label">
-          Select View
+          Global Average
         </p>
           <div
             class="segment-selector"
@@ -1581,7 +1581,6 @@ const headlinePoints =
             role="button"
             tabindex={hidden ? -1 : 0}
             aria-hidden={hidden}
-            aria-label={`${point.cohort}: ${point.value}% — ${point.measure}`}
             aria-pressed={
               isSelected(
                 point.cohort

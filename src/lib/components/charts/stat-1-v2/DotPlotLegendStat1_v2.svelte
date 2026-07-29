@@ -48,7 +48,7 @@
 <div
   class="legend"
   role="group"
-  aria-label="Select up to two cohorts"
+  aria-label="Select up a cohort"
   bind:this={legendElement}
 >
   {#each cohorts as cohort}

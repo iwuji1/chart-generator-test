@@ -848,7 +848,7 @@ const rowPlotOffset =
 <section class="dot-plot-stat-1">
   <div class="chart-heading">
     <h2>
-      STAT 1: Employee Workload and capabilities
+      Employee Workload and capabilities
     </h2>
 
 <p class="chart-explanation">
@@ -1644,7 +1644,6 @@ const rowPlotOffset =
             role="button"
             tabindex={hidden ? -1 : 0}
             aria-hidden={hidden}
-            aria-label={`${point.cohort}: ${point.value}% — ${point.measure}`}
             aria-pressed={
               isSelected(
                 point.cohort
