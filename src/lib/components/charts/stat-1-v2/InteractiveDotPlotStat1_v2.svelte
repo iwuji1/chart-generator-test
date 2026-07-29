@@ -852,22 +852,16 @@ const rowPlotOffset =
     </h2>
 
 <p class="chart-explanation">
-  This chart shows the levels of agreement with selected statements. The
+  This chart shows the levels of agreement with selected statements.
+  You can filter to explore different segment groups and highlight cohorts to see all their related values.
+  The
   <span class="inline-key average-key">
     <span
       class="average-marker-icon"
       aria-hidden="true"
     ></span>
   </span>
-  marker is the average response percentage. You can highlight 
-  <span class="inline-key highlight-key" style:background={comparisonColours[0]}>
-    cohorts
-  </span>
-  to see all their related values, and also compare
-  <span class="inline-key compare-key" style:background={comparisonColours[1]}>
-    responses
-  </span>
-  with another cohort.
+  marker is the average response percentage.
 </p>
   </div>
 
@@ -971,7 +965,7 @@ const rowPlotOffset =
         {/if}
       </desc>
 
-      <defs>
+      <!-- <defs>
         {#each comparisonRows as comparison}
           <linearGradient
             id={getGradientId(
@@ -1002,7 +996,7 @@ const rowPlotOffset =
             />
           </linearGradient>
         {/each}
-      </defs>
+      </defs> -->
 
       <!-- Percentage axis -->
       <g
