@@ -907,7 +907,7 @@ const rowPlotOffset =
                 selectHeadlineView
               }
             >
-              Headline
+              Global Average
             </button>
 
             {#each segments as segment}
