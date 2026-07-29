@@ -1,5 +1,6 @@
 <script>
   import Stat1 from '$lib/components/charts/stat-1/InteractiveDotPlotStat1.svelte';
+  import Stat1_v2 from '$lib/components/charts/stat-1-v2/InteractiveDotPlotStat1_v2.svelte'
   import Stat2 from '$lib/components/charts/stat-2/InteractiveDotPlotStat2.svelte';
   import Stat3 from '$lib/components/charts/stat-3/InteractiveDotPlotStat3.svelte';
   import Stat4 from '$lib/components/charts/stat-4/InteractiveDotPlotStat4.svelte';
@@ -87,6 +88,9 @@
     role="tabpanel"
   >
     <activeChart.chart />
+  </section>
+  <section class="wide-chart">
+    <Stat1_v2 />
   </section>
 </main>
 
