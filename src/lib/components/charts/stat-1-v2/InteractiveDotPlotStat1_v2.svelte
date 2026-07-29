@@ -1167,6 +1167,7 @@ const rowPlotOffset =
         hoverLinePath &&
         hoveredCohort &&
         selectedCohorts.length === 0
+        && highlightedGroup
       }
         <g
           class="hover-line-group"
