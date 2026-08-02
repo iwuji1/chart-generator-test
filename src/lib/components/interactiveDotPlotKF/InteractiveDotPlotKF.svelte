@@ -1087,14 +1087,11 @@
       <!-- Selectable cohort circles -->
       <g class="cohort-dots">
         {#each cohortPoints as point}
-          {@const hidden =
-            isDotHidden(point.cohort)}
+          {@const hidden = isDotHidden(point.cohort)}
 
           <circle
             class="dot"
-            class:active-dot={
-              isHighlighted(point.cohort)
-            }
+            class:active-dot={isHighlighted(point.cohort)}
             class:hidden-dot={hidden}
             cx={xScale(point.value)}
             cy={getRowY(point.rowIndex)}

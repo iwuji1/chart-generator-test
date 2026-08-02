@@ -620,16 +620,7 @@ const rowPlotOffset =
     </h2>
 
 <p class="chart-explanation">
-  This chart shows the levels of agreement with selected statements.
-  You can filter to explore different segment groups and highlight cohorts to see all their related values.
-  The
-  <span class="inline-key average-key">
-    <span
-      class="average-marker-icon"
-      aria-hidden="true"
-    ></span>
-  </span>
-  marker is the average response percentage.
+  This chart shows the levels of agreement with selected statements. The initial view shows the global average, you can then filter to explore different segment groups. Clicking on a cohort will highlight its related values, you can then click to choose to compare responses with another cohort.
 </p>
   </div>
 
