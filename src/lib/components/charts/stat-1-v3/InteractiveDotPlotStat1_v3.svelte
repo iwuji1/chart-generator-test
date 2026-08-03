@@ -1,6 +1,5 @@
 <script>
   import * as d3 from 'd3';
-  import { scaleLinear } from 'd3-scale';
 
   import {
     draw,
@@ -25,7 +24,6 @@
     sourceData = SourceData,
     initialSegment = 'Job Level'
   } = $props();
-
 
   /* ---------------------------------
      View state
@@ -68,7 +66,6 @@
       selectedCohorts[1] ?? ''
     );
 
-
   let hoveredCohort =
     $state(null);
 
@@ -83,17 +80,6 @@
 
   let containerWidth =
     $state(900);
-  
-  const padding = {
-    top: 40,
-    right: 0,
-    bottom: 80,
-    left: 30
-  }
-
-  let barWidth = $state(900);
-  
-  const barHeight = 950;
 
   /* ---------------------------------
      Segment data
@@ -203,7 +189,7 @@
         : Math.max(
             760,
             Math.min(
-              900,
+              940,
               containerWidth
             )
           )
@@ -329,56 +315,20 @@
      --------------------------------- */
 
   const highlightColour =
-    '#05c690';
+    '#009b77';
+
+  const highlightBorderColour =
+    '#00634f';
 
   const comparisonColour =
-    '#ffffff';
-
-  const comparisonOutsideColour =
     '#007da4';
 
-  const averageColour =
-    '#123f37';
+  const defaultDotFill =
+    '#e3e6e5';
 
-  const previewColour = '#05c690';
+  const defaultDotStroke =
+    '#8f9995';
 
-  function getCohortTextColour(
-    cohort
-  ) {
-    if (
-      cohort ===
-      highlightedCohort
-    ) {
-      return highlightColour;
-    }
-
-    if (
-      cohort ===
-      comparisonCohort
-    ) {
-      return comparisonOutsideColour;
-    }
-
-    return '#05c690';
-  }
-
-  function getCohortStrokeColour(
-    cohort
-  ) {
-    if (
-      cohort ===
-      highlightedCohort
-    ) {
-      return "#000000";
-    }
-    
-    if (
-      cohort ===
-      comparisonCohort
-    ) {
-      return comparisonOutsideColour;
-    }
-  }
 
   function getCohortColour(
     cohort
@@ -401,16 +351,110 @@
       cohort ===
       hoveredCohort
     ) {
-      return previewColour;
+      return highlightColour;
+    }
+
+    return defaultDotStroke;
+  }
+
+
+  /*
+  * Used for selected value labels and
+  * selected legend-pill borders.
+  */
+  function getCohortTextColour(
+    cohort
+  ) {
+    if (
+      cohort ===
+      highlightedCohort
+    ) {
+      return highlightBorderColour;
     }
 
     if (
-      cohort === 'AVERAGE'
+      cohort ===
+      comparisonCohort
     ) {
-      return averageColour;
+      return comparisonColour;
     }
 
-    return '#8f9995';
+    if (
+      cohort ===
+      hoveredCohort
+    ) {
+      return highlightBorderColour;
+    }
+
+    return '#272c2a';
+  }
+
+
+  function getDotFill(
+    cohort
+  ) {
+    /*
+    * Primary selection:
+    * green fill.
+    */
+    if (
+      cohort ===
+      highlightedCohort
+    ) {
+      return highlightColour;
+    }
+
+    /*
+    * Comparison selection:
+    * white fill with blue border.
+    */
+    if (
+      cohort ===
+      comparisonCohort
+    ) {
+      return '#ffffff';
+    }
+
+    /*
+    * Hover preview:
+    * white fill with dark-green border.
+    */
+    if (
+      cohort ===
+      hoveredCohort
+    ) {
+      return '#ffffff';
+    }
+
+    return defaultDotFill;
+  }
+
+
+  function getDotStroke(
+    cohort
+  ) {
+    if (
+      cohort ===
+      highlightedCohort
+    ) {
+      return highlightBorderColour;
+    }
+
+    if (
+      cohort ===
+      comparisonCohort
+    ) {
+      return comparisonColour;
+    }
+
+    if (
+      cohort ===
+      hoveredCohort
+    ) {
+      return highlightBorderColour;
+    }
+
+    return defaultDotStroke;
   }
 
 
@@ -514,6 +558,40 @@
     hoveredPoint = null;
   }
 
+  function getDefaultComparison(
+    segment
+  ) {
+    const availableCohorts =
+      segmentOptions[segment] ?? [];
+
+    const comparableCohorts =
+      availableCohorts.filter(
+        (cohort) =>
+          cohort !== 'AVERAGE'
+      );
+
+    if (
+      comparableCohorts.length === 0
+    ) {
+      return [];
+    }
+
+    if (
+      comparableCohorts.length === 1
+    ) {
+      return [
+        comparableCohorts[0]
+      ];
+    }
+
+    return [
+      comparableCohorts[0],
+      comparableCohorts[
+        comparableCohorts.length - 1
+      ]
+    ];
+  }
+
 
   function selectSegment(
     segment
@@ -536,7 +614,9 @@
      * Reset selections because cohorts differ
      * between employee segments.
      */
-    selectedCohorts = [];
+    selectedCohorts = getDefaultComparison(
+      segment
+    );
     hoveredCohort = null;
     hoveredPoint = null;
   }
@@ -567,87 +647,61 @@
      * Clicking the only selected cohort clears it.
      */
     if (
-      selectedIndex === 0 &&
-      selectedCohorts.length ===
-        1
+      selectedIndex >= 0
     ) {
-      selectedCohorts = [];
+      selectedCohorts = selectedCohorts.filter(
+        (selected) =>
+          selected !== cohort
+      )
+
+      hoveredCohort = null;
+      hoveredPoint = null;
       return;
     }
 
-
     /*
-     * Clicking the blue comparison removes it,
-     * leaving the green highlight selected.
-     */
-    if (
-      selectedIndex === 1
-    ) {
-      selectedCohorts = [
-        selectedCohorts[0]
-      ];
-
-      return;
-    }
-
-
-    /*
-     * Keep the first selected cohort locked while
-     * comparison is active. Use Reset comparison
-     * to clear the complete selection.
-     */
-    if (
-      selectedIndex === 0 &&
-      selectedCohorts.length ===
-        2
-    ) {
-      return;
-    }
-
-
-    /*
-     * First selection becomes green.
-     */
-    if (
-      selectedCohorts.length ===
-        0
-    ) {
-      selectedCohorts = [
-        cohort
-      ];
-
-      return;
-    }
-
-
-    /*
-     * Second selection becomes blue.
-     */
-    if (
-      selectedCohorts.length ===
-        1
-    ) {
-      selectedCohorts = [
-        selectedCohorts[0],
-        cohort
-      ];
-
-      return;
-    }
-
-
-    /*
-     * Further selections replace the blue cohort.
-     */
+   * No selection: make this the primary
+   * green cohort.
+   */
+  if (
+    selectedCohorts.length === 0
+  ) {
     selectedCohorts = [
-      selectedCohorts[0],
       cohort
     ];
+
+    return;
   }
+
+  /*
+   * One selection: add the blue comparison.
+   */
+  if (
+    selectedCohorts.length === 1
+  ) {
+    selectedCohorts = [
+      ...selectedCohorts,
+      cohort
+    ];
+
+    return;
+  }
+
+  /*
+   * Two selections already exist:
+   * keep the green cohort and replace blue.
+   */
+  selectedCohorts = [
+    selectedCohorts[0],
+    cohort
+  ];
+}
 
 
   function resetComparison() {
-    selectedCohorts = [];
+    selectedCohorts = getDefaultComparison(
+      selectedSegment
+    );
     hoveredCohort = null;
     hoveredPoint = null;
   }
@@ -765,26 +819,6 @@
     );
   }
 
-
-  function getDotFill(
-    cohort
-  ) {
-    return isHighlighted(
-      cohort
-    )
-      ? getCohortColour(
-          cohort
-        )
-      : '#e3e6e5';
-  }
-
-
-  function getDotStroke(cohort) {
-    return isHighlighted(cohort)
-      ? getCohortStrokeColour(cohort)
-      : '#ffffff';
-  }
-
   function getDotOpacity(
     cohort
   ) {
@@ -842,7 +876,7 @@
     return isHighlighted(
       cohort
     )
-      ? 10
+      ? 12
       : 10;
   }
 
@@ -886,7 +920,7 @@
           ),
 
         endColour:
-          getCohortStrokeColour(
+          getCohortColour(
             comparison.secondCohort
           )
       };
@@ -929,6 +963,27 @@
           point.rowIndex
         ) + 23;
   }
+
+  function handleDotClick(
+    event,
+    point
+  ) {
+    event.stopPropagation();
+
+    /*
+    * On touch devices, tapping performs the
+    * information-preview role of hover.
+    */
+    showTooltip(
+      event,
+      point
+    );
+
+    selectCohort(
+      point.cohort
+    );
+  }
+
 </script>
 
 
@@ -1030,7 +1085,7 @@
                     resetComparison
                   }
                 >
-                  Reset Comparison
+                  Reset to default
                 </button>
               {/if}
             </div>
@@ -1063,6 +1118,10 @@
     bind:clientWidth={
       containerWidth
     }
+    onclick= {() => {
+      hoveredPoint = null;
+      hoveredCohort = null;
+    }}
   >
     <svg
       {width}
@@ -1325,10 +1384,8 @@
                 point.rowIndex
               )}
               r="9"
-              fill={
-                averageColour
-              }
-              stroke="#111111"
+              fill="#009b77"
+              stroke="#00634f"
               stroke-width="2"
             >
               <title>
@@ -1339,13 +1396,13 @@
 
             <rect
               class="bar"
-              x={padding.left}
+              x={margin.left}
               y={getRowY(
                 point.rowIndex
               ) - 2}
-              width={xScale(point.value) - padding.left}
+              width={xScale(point.value) - margin.left}
               height={5}
-              fill="000000"
+              fill="#00634f"
             />
 
             <text
@@ -1455,13 +1512,11 @@
                 onblur={
                   hideTooltip
                 }
-                onclick={(event) => {
-                  event.stopPropagation();
-
-                  selectCohort(
-                    point.cohort
-                  );
-                }}
+                onclick={(event) =>
+                  handleDotClick(
+                    event,
+                    point
+                  )}
                 onkeydown={(event) =>
                   handleDotKeydown(
                     event,
@@ -1549,6 +1604,113 @@
 
 
 <style>
+  .dot-plot-stat-1 {
+    --kf-green: #009b77;
+    --kf-green-dark: #00634f;
+    --kf-eyebrow: #053328;
+    --kf-blue: #007da4;
+    --kf-black: #000000;
+    --kf-grey: #8f9995;
+    --kf-light-grey: #e3e6e5;
+
+    width: 100%;
+    max-width: 940px;
+    margin-inline: auto;
+
+    overflow: visible;
+
+    color: var(--kf-black);
+
+    font-family:
+      'Gotham',
+      Arial,
+      sans-serif;
+  }
+
+  /* Main page heading */
+  .page-title,
+  h1 {
+    margin: 0;
+
+    color: var(--kf-green);
+
+    font-size: 64px;
+    font-weight: 700;
+    line-height: 1.05;
+  }
+
+  /* Chart and section headings */
+  .chart-heading h2,
+  h2 {
+    margin: 0;
+
+    color: var(--kf-green);
+
+    font-size: 32px;
+    font-weight: 500;
+    line-height: 1.15;
+  }
+
+  /* Pull quotes */
+  .quote {
+    margin: 0;
+
+    color: var(--kf-green);
+
+    font-size: 24px;
+    font-weight: 500;
+    line-height: 1.35;
+  }
+
+  /* Standard body copy */
+  .body-copy {
+    color: var(--kf-black);
+
+    font-size: 18px;
+    font-weight: 400;
+    line-height: 1.5;
+  }
+
+  /* Small uppercase labels */
+  .control-label,
+  .eyebrow,
+  .axis-title {
+    color: var(--kf-eyebrow);
+
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.2;
+
+    letter-spacing: 0.055em;
+    text-transform: uppercase;
+  }
+
+  @media (max-width: 680px) {
+    .page-title,
+    h1 {
+      font-size: 40px;
+    }
+
+    .chart-heading h2,
+    h2 {
+      font-size: 28px;
+    }
+
+    .quote {
+      font-size: 22px;
+    }
+
+    .chart-explanation,
+    .body-copy {
+      font-size: 16px;
+    }
+
+    .control-label,
+    .eyebrow,
+    .axis-title {
+      font-size: 13px;
+    }
+  }
 
   h2 {
     font-size: 32px;
@@ -1561,52 +1723,24 @@
       sans-serif;
     font-size: 18px;
   }
-  .dot-plot-stat-1 {
-    width: 100%;
-    max-width: 900px;
-
-    margin-inline: auto;
-
-    overflow: visible;
-
-    color: #171a19;
-
-    font-family:
-      'gotham',
-      Arial,
-      sans-serif;
-  }
 
 
   .chart-heading {
     margin-bottom: 1rem;
   }
 
-  .chart-heading h2 {
-    margin: 0;
-
-    font-size:
-      clamp(
-        1.25rem,
-        3vw,
-        1.75rem
-      );
-
-    line-height: 1.15;
-    text-transform: uppercase;
-  }
-
   .chart-explanation {
-    max-width: 760px;
+    max-width: 940px;
 
     margin:
-      0.6rem
+      0.75rem
       0
       0;
 
-    color: #626866;
+    color: var(--kf-black);
 
-    font-size: 0.85rem;
+    font-size: 18px;
+    font-weight: 400;
     line-height: 1.5;
   }
 
@@ -1909,7 +2043,7 @@
     box-sizing:
       border-box;
 
-    stroke-width: 1.4;
+    stroke-width: 1.5;
 
     transition:
       r 180ms ease,
@@ -1925,18 +2059,15 @@
 
   .dot:hover,
   .dot:focus-visible,
-  .active-dot {
-    stroke-width: 2;
+  .dot.active-dot {
+    stroke-width: 2.5;
 
     outline: none;
 
     filter:
       drop-shadow(
         0 2px 3px
-        rgb(
-          0 0 0 /
-          20%
-        )
+        rgb(0 0 0 / 14%)
       );
   }
 

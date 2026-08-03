@@ -1,23 +1,22 @@
 <script>
+  import {
+    formatSubsegmentLabel
+  } from './stat1Data.js';
+
   let {
     point = null,
     x = 0,
     y = 0,
-    colour = '#76bf3d'
+    colour = '#009b77'
   } = $props();
 
-  const tooltipWidth = 300;
-  const estimatedTooltipHeight = 180;
-  const offset = 16;
+  const offset = 14;
   const viewportPadding = 12;
 
-  /*
-   * Move the tooltip into document.body so that
-   * transformed chart ancestors cannot affect its
-   * fixed positioning.
-   */
   function portal(node) {
-    document.body.appendChild(node);
+    document.body.appendChild(
+      node
+    );
 
     return {
       destroy() {
@@ -26,85 +25,71 @@
     };
   }
 
-  const tooltipX = $derived.by(() => {
-    if (typeof window === 'undefined') {
-      return x + offset;
-    }
+  const tooltipX =
+    $derived.by(() => {
+      if (
+        typeof window ===
+        'undefined'
+      ) {
+        return x + offset;
+      }
 
-    const fitsOnRight =
-      x +
-        offset +
-        tooltipWidth +
-        viewportPadding <=
-      window.innerWidth;
+      return Math.min(
+        x + offset,
+        window.innerWidth -
+          180 -
+          viewportPadding
+      );
+    });
 
-    if (fitsOnRight) {
-      return x + offset;
-    }
+  const tooltipY =
+    $derived.by(() => {
+      if (
+        typeof window ===
+        'undefined'
+      ) {
+        return y + offset;
+      }
 
-    return Math.max(
-      viewportPadding,
-      x - tooltipWidth - offset
-    );
-  });
-
-  const tooltipY = $derived.by(() => {
-    if (typeof window === 'undefined') {
-      return y + offset;
-    }
-
-    const fitsBelow =
-      y +
-        offset +
-        estimatedTooltipHeight +
-        viewportPadding <=
-      window.innerHeight;
-
-    if (fitsBelow) {
-      return y + offset;
-    }
-
-    return Math.max(
-      viewportPadding,
-      y -
-        estimatedTooltipHeight -
-        offset
-    );
-  });
+      return Math.min(
+        y + offset,
+        window.innerHeight -
+          50 -
+          viewportPadding
+      );
+    });
 </script>
 
 {#if point}
   <aside
     use:portal
     class="tooltip"
-    style:left={`${tooltipX}px`}
-    style:top={`${tooltipY}px`}
+    style:left={`${Math.max(
+      viewportPadding,
+      tooltipX
+    )}px`}
+    style:top={`${Math.max(
+      viewportPadding,
+      tooltipY
+    )}px`}
+    style:border-color={colour}
     role="tooltip"
   >
-    <div class="tooltip-heading">
-      <span
-        class="tooltip-dot"
-        style:background={colour}
-      ></span>
+    <span
+      class="tooltip-dot"
+      style:background={
+        point.cohort ===
+        'AVERAGE'
+          ? '#009b77'
+          : colour
+      }
+    ></span>
 
-      <span class="cohort">
-        {point.cohort}
-      </span>
-    </div>
-
-    <p class="measure">
-      {point.measure}
-    </p>
-
-    <div class="value-row">
-      <span class="value">
-        {point.value}<sup>%</sup>
-      </span>
-
-      <span class="value-label">
-        Agree
-      </span>
-    </div>
+    <span class="cohort">
+      {formatSubsegmentLabel(
+        point.cohort
+      )}
+    </span>
   </aside>
 {/if}
 
@@ -112,75 +97,61 @@
   .tooltip {
     position: fixed;
     z-index: 9999;
-    font-family: Gotham, sans-serif;
 
-    width: 300px;
-    max-width: calc(100vw - 24px);
+    display: inline-flex;
+    gap: 0.45rem;
+    align-items: center;
+
     box-sizing: border-box;
-    margin: 0;
-    padding: 1rem;
 
-    border: 1px solid #d8dcda;
-    border-radius: 12px;
+    max-width:
+      calc(
+        100vw - 24px
+      );
+
+    margin: 0;
+
+    border:
+      1px solid
+      #009b77;
+
+    border-radius: 999px;
+
+    padding:
+      0.45rem
+      0.7rem;
 
     background: white;
-    color: #171a19;
+    color: #053328;
+
+    font-family:
+      'Gotham',
+      Arial,
+      sans-serif;
 
     box-shadow:
-      0 10px 30px
+      0 5px 16px
       rgb(0 0 0 / 12%);
 
     pointer-events: none;
   }
 
-  .tooltip-heading {
-    display: flex;
-    align-items: center;
-    gap: 0.55rem;
-  }
-
   .tooltip-dot {
-    width: 10px;
-    height: 10px;
+    width: 9px;
+    height: 9px;
     flex: 0 0 auto;
+
     border-radius: 50%;
   }
 
   .cohort {
-    font-size: 0.82rem;
+    overflow: hidden;
+
+    font-size: 14px;
     font-weight: 700;
-    line-height: 1.25;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-  }
+    line-height: 1.1;
 
-  .measure {
-    margin: 0.85rem 0 1rem;
-    font-size: 0.95rem;
-    line-height: 1.4;
-  }
-
-  .value-row {
-    display: flex;
-    align-items: baseline;
-    gap: 0.45rem;
-  }
-
-  .value {
-    font-size: 2rem;
-    font-weight: 700;
-    line-height: 1;
-  }
-
-  .value-label {
-    color: #6b716e;
-    font-size: 0.8rem;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-  }
-
-  sup {
-    font-weight: 300;
-    font-size: 1rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 </style>

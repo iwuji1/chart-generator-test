@@ -3,7 +3,7 @@ import rawData from '$lib/datasets/stat_1.tsv?raw';
 export const segments = [
   'Job Level',
   'Industry',
-  'Age Generation',
+  'Generation',
   'Country'
 ];
 
@@ -35,7 +35,7 @@ export const segmentOptions = {
     'AVERAGE'
   ],
 
-  'Age Generation': [
+  'Generation': [
     'Gen Z',
     'Millennial',
     'Gen X',
@@ -44,17 +44,17 @@ export const segmentOptions = {
   ],
 
   'Country': [
-    'USA',
-    'UK',
-    'France',
-    'Germany',
-    'UAE',
-    'Saudi Arabia',
-    'Singapore',
-    'India',
-    'Japan',
     'Australia',
     'Brazil',
+    'France',
+    'Germany',
+    'India',
+    'Japan',
+    'Saudi Arabia',
+    'Singapore',
+    'UAE',
+    'UK',
+    'USA',
     'AVERAGE'
   ]
 };
@@ -125,11 +125,19 @@ function createSegmentValues(
 export function formatSubsegmentLabel(
   subsegment
 ) {
-  return subsegment ===
-    'Industry — Other'
-    ? 'Other'
-    : subsegment;
+
+  if (subsegment === 'AVERAGE') {
+    return 'Global Average';
+  }
+
+  if (subsegment === 'Industry - Other') 
+  {
+    return 'Other';
+  }
+  return subsegment;
 }
+
+
 
 /*
  * Supports both "Key" and "Kay" in case
