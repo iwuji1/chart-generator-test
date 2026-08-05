@@ -945,37 +945,173 @@
     };
   }
 
+  const valueLabelGap = 20;
 
-  function getLabelY(
+  function getOtherSelectedPoint(
     point,
     cohort
   ) {
-    const selectionIndex =
-      selectedCohorts.indexOf(
+    const otherCohort =
+      selectedCohorts.find(
+        (selected) =>
+          selected !== cohort
+      );
+
+    if (!otherCohort) {
+      return null;
+    }
+
+    return (
+      currentDots.find(
+        (candidate) =>
+          candidate.rowIndex ===
+            point.rowIndex &&
+          candidate.cohort ===
+            otherCohort
+      ) ?? null
+    );
+  }
+
+
+  /*
+  * Position labels outside the comparison:
+  *
+  * leftmost dot  → label on its left
+  * rightmost dot → label on its right
+  */
+  function getLabelSide(
+    point,
+    cohort
+  ) {
+    const otherPoint =
+      getOtherSelectedPoint(
+        point,
         cohort
       );
 
-    return selectionIndex === 0
-      ? getRowY(
-          point.rowIndex
-        ) + 5
-      : getRowY(
-          point.rowIndex
-        ) + 5;
+    /*
+    * Only one cohort is selected.
+    * Prefer the right, unless the dot is close
+    * to the chart's right-hand edge.
+    */
+    if (!otherPoint) {
+      return point.value >= 88
+        ? 'left'
+        : 'right';
+    }
+
+    if (
+      point.value <
+      otherPoint.value
+    ) {
+      return 'left';
+    }
+
+    if (
+      point.value >
+      otherPoint.value
+    ) {
+      return 'right';
+    }
+
+    /*
+    * If both values are identical, put one
+    * label on either side of the shared dot.
+    */
+    return (
+      selectedCohorts.indexOf(
+        cohort
+      ) === 0
+        ? 'left'
+        : 'right'
+    );
   }
+
 
   function getLabelX(
     point,
     cohort
   ) {
-    const selectionIndex =
-      selectedCohorts.indexOf(
+    const side =
+      getLabelSide(
+        point,
         cohort
       );
 
-    return selectionIndex === 0
-      ? xScale(point.value) + 35
-      : xScale(point.value) - 35;
+    const dotX =
+      xScale(
+        point.value
+      );
+
+    if (side === 'left') {
+      return Math.max(
+        margin.left + 2,
+        dotX - valueLabelGap
+      );
+    }
+
+    return Math.min(
+      width -
+        margin.right -
+        2,
+      dotX +
+        valueLabelGap
+    );
+  }
+
+
+  function getLabelAnchor(
+    point,
+    cohort
+  ) {
+    return (
+      getLabelSide(
+        point,
+        cohort
+      ) === 'left'
+        ? 'end'
+        : 'start'
+    );
+  }
+
+
+  function getLabelY(
+    point,
+    cohort
+  ) {
+    const otherPoint =
+      getOtherSelectedPoint(
+        point,
+        cohort
+      );
+
+    /*
+    * If the two values are exactly the same,
+    * separate the labels vertically as well.
+    */
+    if (
+      otherPoint &&
+      point.value ===
+        otherPoint.value
+    ) {
+      return (
+        selectedCohorts.indexOf(
+          cohort
+        ) === 0
+          ? getRowY(
+              point.rowIndex
+            ) - 25
+          : getRowY(
+              point.rowIndex
+            ) + 25
+      );
+    }
+
+    return (
+      getRowY(
+        point.rowIndex
+      ) + 6
+    );
   }
 
   function handleDotClick(
@@ -1560,11 +1696,11 @@
                   point,
                   series.cohort
                 )}
-                y={getLabelY(
-                  point,
-                  series.cohort
-                )}
-                text-anchor="middle"
+                y={getRowY(
+                  point.rowIndex
+                ) + 3}
+                text-anchor={getLabelAnchor(point, series.cohort)}
+                dominant-baseline="middle"
                 fill={getCohortTextColour(
                   series.cohort
                 )}
@@ -1798,7 +1934,7 @@
       0
       0.55rem;
 
-    color: #626866;
+    color: #053328;
 
     font-size: 0.68rem;
     font-weight: 800;
@@ -1951,7 +2087,7 @@
   /* Axis */
 
   .axis-title {
-    fill: #626866;
+    fill: #053328;
   }
 
   .axis-baseline,
