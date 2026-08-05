@@ -36,10 +36,10 @@ export const segmentOptions = {
   ],
 
   'Generation': [
-    'Gen Z',
-    'Millennial',
-    'Gen X',
     'Baby Boomers',
+    'Gen X',
+    'Millennial',
+    'Gen Z',
     'AVERAGE'
   ],
 

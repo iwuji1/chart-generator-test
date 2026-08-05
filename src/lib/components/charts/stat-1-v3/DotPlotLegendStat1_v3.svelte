@@ -255,7 +255,7 @@
     color:
       var(--pill-colour);
 
-    font-weight: 700;
+    font-weight: 500;
   }
 
   button.muted {
@@ -263,15 +263,15 @@
   }
 
   .legend-dot {
-    width: 0.72rem;
-    height: 0.72rem;
+    width: 0.85rem;
+    height: 0.85rem;
     flex: 0 0 auto;
 
     box-sizing:
       border-box;
 
     border:
-      1.75px solid
+      2px solid
       #8f9995;
 
     border-radius: 50%;

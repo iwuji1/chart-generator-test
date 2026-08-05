@@ -217,29 +217,29 @@
   const rowHeight =
     $derived(
       isMobile
-        ? 88
-        : 65
+        ? 112
+        : 92
     );
 
   const measureLabelHeight =
     $derived(
       isMobile
-        ? 58
-        : 38
+        ? 72
+        : 56
     );
 
   const measureLabelOffset =
     $derived(
       isMobile
-        ? 78
-        : 62
+        ? 96
+        : 78
     );
 
   const rowPlotOffset =
     $derived(
       isMobile
-        ? 50
-        : 38
+        ? 62
+        : 52
     );
 
 
@@ -958,10 +958,10 @@
     return selectionIndex === 0
       ? getRowY(
           point.rowIndex
-        ) - 13
+        ) - 22
       : getRowY(
           point.rowIndex
-        ) + 23;
+        ) + 35;
   }
 
   function handleDotClick(
@@ -1073,21 +1073,6 @@
               <p class="control-label">
                 Select up to two cohorts
               </p>
-
-              {#if
-                selectedCohorts.length >
-                  0
-              }
-                <button
-                  type="button"
-                  class="reset-comparison-button"
-                  onclick={
-                    resetComparison
-                  }
-                >
-                  Reset to default
-                </button>
-              {/if}
             </div>
 
             <DotPlotLegendStat1V3
@@ -1238,6 +1223,7 @@
           >
             {tick}<tspan
               font-size="7"
+              class="percent-sign"
               baseline-shift="super"
             >%</tspan>
           </text>
@@ -1374,7 +1360,20 @@
           {#each
             globalAverageDots
             as point
-          }
+          }            
+          
+          
+            <rect
+                class="bar"
+                x={margin.left}
+                y={getRowY(
+                  point.rowIndex
+                ) - 2}
+                width={xScale(point.value) - margin.left}
+                height={5}
+                fill="#00634f"
+              />
+
             <circle
               class="average-dot"
               cx={xScale(
@@ -1388,22 +1387,9 @@
               stroke="#00634f"
               stroke-width="2"
             >
-              <title>
-                Global Average:
-                {point.value}%
-              </title>
             </circle>
 
-            <rect
-              class="bar"
-              x={margin.left}
-              y={getRowY(
-                point.rowIndex
-              ) - 2}
-              width={xScale(point.value) - margin.left}
-              height={5}
-              fill="#00634f"
-            />
+
 
             <text
               class="average-value-label"
@@ -1419,6 +1405,7 @@
             >
               {point.value}<tspan
                 font-size="7"
+                class="percent-sign"
                 baseline-shift="super"
               >%</tspan>
             </text>
@@ -1523,10 +1510,6 @@
                     point
                   )}
               >
-                <title>
-                  {point.cohort}:
-                  {point.value}%
-                </title>
               </circle>
             {/each}
           </g>
@@ -1572,7 +1555,7 @@
                 )}
               >
                 {point.value}<tspan
-                  font-size="7"
+                  font-size="percent-sign"
                   baseline-shift="super"
                 >%</tspan>
               </text>
@@ -1649,6 +1632,8 @@
     font-size: 32px;
     font-weight: 500;
     line-height: 1.15;
+
+    text-transform: none;
   }
 
   /* Pull quotes */
@@ -1672,43 +1657,37 @@
   }
 
   /* Small uppercase labels */
-  .control-label,
-  .eyebrow,
-  .axis-title {
-    color: var(--kf-eyebrow);
-
-    font-size: 14px;
-    font-weight: 700;
-    line-height: 1.2;
-
-    letter-spacing: 0.055em;
-    text-transform: uppercase;
-  }
 
   @media (max-width: 680px) {
-    .page-title,
-    h1 {
-      font-size: 40px;
-    }
-
-    .chart-heading h2,
-    h2 {
+    .chart-heading h2 {
       font-size: 28px;
     }
 
-    .quote {
-      font-size: 22px;
-    }
-
-    .chart-explanation,
-    .body-copy {
+    .chart-explanation {
       font-size: 16px;
     }
 
     .control-label,
-    .eyebrow,
     .axis-title {
       font-size: 13px;
+    }
+
+    .axis-tick-label {
+      font-size: 12px;
+    }
+
+    .measure-label {
+      font-size: 16px;
+      line-height: 1.35;
+    }
+
+    .value-label,
+    .average-value-label {
+      font-size: 18px;
+    }
+
+    .percent-sign {
+      font-size: 10px;
     }
   }
 
@@ -1741,7 +1720,7 @@
 
     font-size: 18px;
     font-weight: 400;
-    line-height: 1.5;
+    line-height: 1.55;
   }
 
 
@@ -1821,29 +1800,29 @@
   .segment-selector {
     display: flex;
     flex-wrap: wrap;
-
-    gap: 0.35rem;
-
+    gap: 0.75rem;
     width: 100%;
   }
 
   .segment-selector button {
-    border:
-      1px solid
-      #d5dad8;
+    min-height: 48px;
 
-    border-radius: 999px;
+    border:
+      1.5px solid
+      #00634f;
+
+    border-radius: 2px;
 
     padding:
-      0.42rem
-      0.68rem;
+      0.7rem
+      1.4rem;
 
-    background: #f3f5f4;
-    color: #525856;
+    background: #ffffff;
+    color: #00634f;
 
     font: inherit;
-    font-size: 0.78rem;
-    font-weight: 700;
+    font-size: 16px;
+    font-weight: 500;
 
     cursor: pointer;
 
@@ -1855,15 +1834,15 @@
 
   .segment-selector button:hover,
   .segment-selector button:focus-visible {
-    border-color: #8e9995;
+    border-color: #f2f8f6;
     outline: none;
   }
 
   .segment-selector button.active {
-    border-color: #123f37;
+    border-color: #00634f;
 
-    background: #123f37;
-    color: white;
+    background: #00634f;
+    color: #ffffff;
   }
 
 
@@ -1957,16 +1936,7 @@
   /* Axis */
 
   .axis-title {
-    fill: #626866;
-
-    font-size: 10px;
-    font-weight: 800;
-
-    letter-spacing:
-      0.055em;
-
-    text-transform:
-      uppercase;
+    fill: #053328;
   }
 
   .axis-baseline,
@@ -1976,19 +1946,21 @@
   }
 
   .axis-tick-label {
-    fill: #626866;
+    fill: #000000;
 
-    font-size: 10px;
-    font-weight: 700;
+    font-family:
+      'Gotham',
+      Arial,
+      sans-serif;
+
+    font-size: 14px;
+    font-weight: 400;
   }
 
   .axis-grid-line {
     stroke: #d8dddb;
-
     stroke-width: 1;
-
-    stroke-dasharray:
-      3 5;
+    stroke-dasharray: 3 5;
 
     pointer-events: none;
   }
@@ -2003,12 +1975,16 @@
     width: 100%;
     height: 100%;
 
-    color: #202422;
+    color: #000000;
 
-    font-size: 12px;
-    font-weight: 700;
+    font-family:
+      'Gotham',
+      Arial,
+      sans-serif;
 
-    line-height: 1.25;
+    font-size: 18px;
+    font-weight: 400;
+    line-height: 1.35;
   }
 
   .row-guide {
@@ -2040,10 +2016,9 @@
 
   .dot,
   .average-dot {
-    box-sizing:
-      border-box;
+    box-sizing: border-box;
 
-    stroke-width: 1.5;
+    stroke-width: 2;
 
     transition:
       r 180ms ease,
@@ -2067,7 +2042,7 @@
     filter:
       drop-shadow(
         0 2px 3px
-        rgb(0 0 0 / 14%)
+        rgb(0 0 0 / 12%)
       );
   }
 
@@ -2080,22 +2055,25 @@
 
   .value-label,
   .average-value-label {
-    font-size: 10px;
-    font-weight: 800;
+    font-family:
+      'Gotham',
+      Arial,
+      sans-serif;
+
+    font-size: 20px;
+    font-weight: 400;
 
     pointer-events: none;
 
     paint-order: stroke;
-
-    stroke: white;
-    stroke-width: 3px;
-
-    stroke-linejoin:
-      round;
+    stroke: #ffffff;
+    stroke-width: 4px;
+    stroke-linejoin: round;
   }
 
-  .average-value-label {
-    fill: #123f37;
+  .percent-sign {
+    font-size: 11px;
+    font-weight: 400;
   }
 
 
@@ -2114,14 +2092,6 @@
   ) {
     .dot-plot-stat-1 {
       width: 100%;
-    }
-
-    .chart-heading h2 {
-      font-size: 1.15rem;
-    }
-
-    .chart-explanation {
-      font-size: 0.8rem;
     }
 
     .sticky-controls {
