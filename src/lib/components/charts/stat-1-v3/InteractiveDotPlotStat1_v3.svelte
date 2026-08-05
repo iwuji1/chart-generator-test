@@ -1409,11 +1409,11 @@
               class="average-value-label"
               x={xScale(
                 point.value
-              )}
+              ) + 35}
               y={
                 getRowY(
                   point.rowIndex
-                ) - 14
+                ) + 5
               }
               text-anchor="middle"
             >
@@ -1570,7 +1570,8 @@
                 )}
               >
                 {point.value}<tspan
-                  font-size="percent-sign"
+                  font-size="7"
+                  class="percent-sign"
                   baseline-shift="super"
                 >%</tspan>
               </text>
@@ -1791,7 +1792,7 @@
     min-width: 0;
   }
 
-  .control-label {
+  .control-label, .axis-title {
     margin:
       0
       0
@@ -1874,8 +1875,7 @@
     margin-bottom: 0.55rem;
   }
 
-  .cohort-control-heading
-    .control-label {
+  .cohort-control-heading {
     margin: 0;
   }
 
@@ -1951,7 +1951,7 @@
   /* Axis */
 
   .axis-title {
-    fill: #053328;
+    fill: #626866;
   }
 
   .axis-baseline,
