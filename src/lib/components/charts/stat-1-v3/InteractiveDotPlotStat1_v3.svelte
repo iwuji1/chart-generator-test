@@ -958,10 +958,24 @@
     return selectionIndex === 0
       ? getRowY(
           point.rowIndex
-        ) - 22
+        ) + 5
       : getRowY(
           point.rowIndex
-        ) + 35;
+        ) + 5;
+  }
+
+  function getLabelX(
+    point,
+    cohort
+  ) {
+    const selectionIndex =
+      selectedCohorts.indexOf(
+        cohort
+      );
+
+    return selectionIndex === 0
+      ? xScale(point.value) + 35
+      : xScale(point.value) - 35;
   }
 
   function handleDotClick(
@@ -1542,8 +1556,9 @@
             }
               <text
                 class="value-label"
-                x={xScale(
-                  point.value
+                x={getLabelX(
+                  point,
+                  series.cohort
                 )}
                 y={getLabelY(
                   point,
