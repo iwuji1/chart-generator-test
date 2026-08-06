@@ -5,9 +5,10 @@
 	"type": "module",
 	"scripts": {
 		"dev": "vite dev",
+		"build:embeds": "node scripts/build-embeds.js",
 		"build:webflow": "vite build --config vite.webflow.config.js",
 		"build:site": "vite build",
-		"build": "npm run build:webflow && npm run build:site",
+		"build": "npm run build:embeds && vite build",
 		"preview": "vite preview",
 		"prepare": "svelte-kit sync || echo ''",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./jsconfig.json",
@@ -20,7 +21,8 @@
 		"build:stat4": "KF_STAT=4 vite build --config vite.embed.config.js",
 		"build:stat5": "KF_STAT=5 vite build --config vite.embed.config.js",
 		"build:stat6": "KF_STAT=6 vite build --config vite.embed.config.js",
-		"build:charts": "rm -rf dist-embeds && npm run build:stat1 && npm run build:stat2 && npm run build:stat3 && npm run build:stat4 && npm run build:stat5 && npm run build:stat6"
+		"build:motivation": "KF_STAT=motivation vite build --config vite.embed.config.js",
+		"build:charts": "rm -rf dist-embeds && npm run build:stat1 && npm run build:stat2 && npm run build:stat3 && npm run build:stat4 && npm run build:stat5 && npm run build:stat6 && npm run build:statmotivation"
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",

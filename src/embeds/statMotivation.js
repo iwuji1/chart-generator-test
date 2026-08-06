@@ -1,10 +1,10 @@
 import { mount } from 'svelte';
 
 import Chart
-  from '$lib/components/charts/stat-1-v3/DotPlotLegendStat1_v3.svelte';
+  from '$lib/components/charts/stat-motivation/InteractiveMotivationChart.svelte';
 
 const selector =
-  '[data-kf-chart="stat-1"]';
+  '[data-kf-chart="stat-motivation"]';
 
 function initialise() {
   document
