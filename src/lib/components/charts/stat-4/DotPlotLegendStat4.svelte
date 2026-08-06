@@ -1,304 +1,232 @@
 <script>
   let {
     cohorts = [],
-    highlightedGroup = '',
-    comparisonGroup = '',
-    onHighlight,
-    onCompare,
-    onClearHighlight,
-    onClearComparison
+    getCohortTextColour,
+    selectedCohorts = [],
+    hoveredCohort = null,
+    onSelect,
+    onPreview,
+    onClearPreview
   } = $props();
 
-  const comparisonOptions =
-    $derived(
-      cohorts.filter(
-        (cohort) =>
-          cohort !==
-          highlightedGroup
-      )
+  function formatCohortLabel(cohort) {
+    return (
+      cohort === 'Average' ||
+      cohort === 'AVERAGE'
+    )
+      ? 'Global Average'
+      : cohort;
+  }
+
+  function isSelected(cohort) {
+    return selectedCohorts.includes(
+      cohort
     );
+  }
+
+  function isActive(cohort) {
+    return (
+      isSelected(cohort) ||
+      hoveredCohort === cohort
+    );
+  }
+
+  function isMuted(cohort) {
+    return (
+      selectedCohorts.length > 0 &&
+      !isSelected(cohort) &&
+      hoveredCohort !== cohort
+    );
+  }
+
+  function getSelectionIndex(
+    cohort
+  ) {
+    return selectedCohorts.indexOf(
+      cohort
+    );
+  }
+
+  function getLegendDotFill(
+    cohort
+  ) {
+    const selectedIndex =
+      getSelectionIndex(cohort);
+
+    if (selectedIndex === 0) {
+      return '#009b77';
+    }
+
+    return '#ffffff';
+  }
+
+  function getLegendDotStroke(
+    cohort
+  ) {
+    const selectedIndex =
+      getSelectionIndex(cohort);
+
+    if (selectedIndex === 0) {
+      return '#00634f';
+    }
+
+    if (selectedIndex === 1) {
+      return '#007da4';
+    }
+
+    if (
+      hoveredCohort === cohort
+    ) {
+      return '#00634f';
+    }
+
+    return '#8f9995';
+  }
+
+  function handleKeydown(
+    event,
+    cohort
+  ) {
+    if (
+      event.key === 'Enter' ||
+      event.key === ' '
+    ) {
+      event.preventDefault();
+      onSelect(cohort);
+    }
+  }
 </script>
 
-<div class="comparison-selectors">
-
-  <div class="select-field">
-    <label
-      class="select-label highlight-label"
-      for="stat4-highlight-cohort"
+<div
+  class="legend"
+  role="group"
+  aria-label="Highlight one cohort and optionally compare it with another"
+>
+  {#each cohorts as cohort}
+    <button
+      type="button"
+      class="legend-pill"
+      class:active={isActive(cohort)}
+      class:selected={isSelected(cohort)}
+      class:muted={isMuted(cohort)}
+      style={`--pill-colour: ${getCohortTextColour(cohort)}`}
+      aria-pressed={isSelected(cohort)}
+      onmouseenter={() => onPreview(cohort)}
+      onmouseleave={onClearPreview}
+      onfocus={() =>
+        onPreview(cohort)}
+      onblur={onClearPreview}
+      onclick={() =>
+        onSelect(cohort)}
+      onkeydown={(event) =>
+        handleKeydown(
+          event,
+          cohort
+        )}
     >
-      HIGHLIGHT COHORT
-    </label>
-
-    <div class="select-input-row">
-      <select
-        id="stat4-highlight-cohort"
-        value={highlightedGroup}
-        onchange={onHighlight}
-      >
-        <option value="">
-          Select a cohort
-        </option>
-
-        {#each cohorts as cohort}
-          <option value={cohort}>
-            {cohort}
-          </option>
-        {/each}
-      </select>
-
-      <button
-        type="button"
-        class="reset-selection reset-highlight"
-        onclick={onClearHighlight}
-        disabled={
-          !highlightedGroup ||
-          !!comparisonGroup
+      <span
+        class="legend-dot"
+        style:background={
+          getLegendDotFill(
+            cohort
+          )
         }
-        aria-label="Clear highlighted cohort"
-        title={
-          comparisonGroup
-            ? 'Remove comparison first'
-            : 'Clear highlighted cohort'
+        style:border-color={
+          getLegendDotStroke(
+            cohort
+          )
         }
-      >
-        <span aria-hidden="true">
-          ×
-        </span>
-      </button>
-    </div>
-  </div>
+      ></span>
 
-
-  <div
-    class="select-field"
-    class:disabled-field={
-      !highlightedGroup
-    }
-  >
-    <label
-      class="select-label compare-label"
-      for="stat4-compare-cohort"
-    >
-      COMPARE WITH
-    </label>
-
-    <div class="select-input-row">
-      <select
-        id="stat4-compare-cohort"
-        value={comparisonGroup}
-        disabled={!highlightedGroup}
-        onchange={onCompare}
-      >
-        <option value="">
-          {highlightedGroup
-            ? 'Select another cohort'
-            : 'Choose highlight cohort first'}
-        </option>
-
-        {#each
-          comparisonOptions
-          as cohort
-        }
-          <option value={cohort}>
-            {cohort}
-          </option>
-        {/each}
-      </select>
-
-      <button
-        type="button"
-        class="reset-selection reset-compare"
-        onclick={onClearComparison}
-        disabled={!comparisonGroup}
-        aria-label="Clear comparison cohort"
-      >
-        <span aria-hidden="true">
-          ×
-        </span>
-      </button>
-    </div>
-  </div>
-
+      <span>
+        {formatCohortLabel(
+          cohort
+        )}
+      </span>
+    </button>
+  {/each}
 </div>
 
 <style>
-  .comparison-selectors {
-    display: grid;
-
-    grid-template-columns:
-      repeat(
-        2,
-        minmax(0, 1fr)
-      );
-
-    gap: 0.75rem;
-  }
-
-  .select-field {
-    display: grid;
-    gap: 0.35rem;
-
-    min-width: 0;
-  }
-
-  .select-label {
-    width: fit-content;
-
-    border-radius: 999px;
-    padding:
-      0.08rem
-      0.42rem;
-
-    color: white;
-
-    font-size: 0.68rem;
-    font-weight: 800;
-    letter-spacing: 0.06em;
-  }
-
-  .highlight-label {
-    background: #05c690;
-  }
-
-  .compare-label {
-    background: #007da4;
-  }
-
-  .select-input-row {
-    display: grid;
-
-    grid-template-columns:
-      minmax(0, 1fr)
-      34px;
-
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
     gap: 0.4rem;
+    width: 100%;
+  }
+
+  button {
+    display: inline-flex;
+    gap: 0.42rem;
     align-items: center;
 
-    width: 100%;
-    min-width: 0;
-  }
+    border: 1px solid transparent;
+    border-radius: 999px;
+    padding: 0.45rem 0.68rem;
 
-  select {
-    width: 100%;
-    min-width: 0;
-
-    box-sizing: border-box;
-
-    border:
-      1px solid
-      #cbd1ce;
-
-    border-radius: 0.65rem;
-
-    padding:
-      0.65rem
-      2.25rem
-      0.65rem
-      0.75rem;
-
-    background: white;
-    color: #202422;
+    background: transparent;
+    color: #272c2a;
 
     font: inherit;
-    font-size: 0.82rem;
-    font-weight: 600;
-
-    cursor: pointer;
-  }
-
-  select:hover {
-    border-color: #89938f;
-  }
-
-  select:focus-visible {
-    border-color: #123f37;
-
-    outline:
-      2px solid
-      rgb(18 63 55 / 20%);
-
-    outline-offset: 2px;
-  }
-
-  select:disabled {
-    background: #f2f4f3;
-    color: #929995;
-
-    cursor: not-allowed;
-  }
-
-  .reset-selection {
-    display: grid;
-    place-items: center;
-
-    width: 34px;
-    height: 34px;
-
-    box-sizing: border-box;
-
-    border:
-      1px solid
-      #cbd1ce;
-
-    border-radius: 50%;
-
-    background: white;
-
-    font: inherit;
-    font-size: 1.25rem;
-    line-height: 1;
+    font-size: 14px;
+    font-weight: 400;
 
     cursor: pointer;
 
     transition:
-      background 150ms ease,
-      color 150ms ease,
       opacity 150ms ease,
-      transform 150ms ease;
+      background 150ms ease,
+      border-color 150ms ease,
+      color 150ms ease;
   }
 
-  .reset-selection span {
-    transform:
-      translateY(-1px);
+  button:hover,
+  button:focus-visible,
+  button.active {
+    background: #f2f4f3;
+    outline: none;
   }
 
-  .reset-highlight {
-    border-color: #05c690;
-    color: #05c690;
+  button.selected {
+    border-color:
+      var(--pill-colour);
+
+    color:
+      var(--pill-colour);
+
+    font-weight: 500;
   }
 
-  .reset-highlight:hover:not(:disabled) {
-    background: #05c690;
-    color: white;
+  button.muted {
+    opacity: 0.45;
   }
 
-  .reset-compare {
-    border-color: #007da4;
-    color: #007da4;
+  .legend-dot {
+    width: 0.85rem;
+    height: 0.85rem;
+    flex: 0 0 auto;
+
+    box-sizing: border-box;
+
+    border: 2px solid #8f9995;
+    border-radius: 50%;
+
+    background: white;
+
+    transition:
+      transform 150ms ease,
+      background 150ms ease,
+      border-color 150ms ease;
   }
 
-  .reset-compare:hover:not(:disabled) {
-    background: #007da4;
-    color: white;
+  button.active .legend-dot,
+  button.selected .legend-dot {
+    transform: scale(1.2);
   }
 
-  .reset-selection:disabled {
-    border-color: #dfe3e1;
-
-    background: #f3f5f4;
-    color: #afb6b3;
-
-    opacity: 0.55;
-
-    cursor: not-allowed;
-  }
-
-  @media (
-    max-width: 680px
-  ) {
-    .comparison-selectors {
-      grid-template-columns:
-        minmax(0, 1fr);
+  @media (max-width: 680px) {
+    button {
+      font-size: 13px;
     }
   }
 </style>

@@ -11,6 +11,7 @@
   import Stat4 from '$lib/components/charts/stat-4/InteractiveDotPlotStat4.svelte'
   import Stat5 from '$lib/components/charts/stat-5/InteractiveDotPlotStat5.svelte'
   import Stat6 from '$lib/components/charts/stat-6/InteractiveDotPlotStat6.svelte'
+  import Stat1_v2 from '$lib/components/charts/stat-1-v2/InteractiveDotPlotStat1_v2.svelte'
 
 </script>
 
@@ -67,6 +68,10 @@
 
   <section class="wide-chart">
     <Stat6 />
+  </section>
+
+  <section class="wide-chart">
+    <Stat1_v2 />
   </section>
 
 </main>

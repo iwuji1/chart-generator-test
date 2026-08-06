@@ -3,7 +3,7 @@ import rawData from '$lib/datasets/stat_4.tsv?raw';
 export const segments = [
   'Job Level',
   'Industry',
-  'Age Generation',
+  'Generation',
   'Country'
 ];
 
@@ -14,10 +14,11 @@ export const segmentOptions = {
     'Senior Leader',
     'Mid-Level Leader',
     'First Level Supervisor/Manager',
-    'Individual Contributor'
+    'Individual Contributor',
+    'AVERAGE'
   ],
 
-  Industry: [
+  'Industry': [
     'Communications Services',
     'Consumer Markets',
     'Energy',
@@ -30,28 +31,31 @@ export const segmentOptions = {
     'Professional Services',
     'Sports',
     'Technology',
-    'Utility'
+    'Utility',
+    'AVERAGE'
   ],
 
-  'Age Generation': [
-    'Gen Z',
-    'Millennial',
+  'Generation': [
+    'Baby Boomers',
     'Gen X',
-    'Baby Boomers'
+    'Millennial',
+    'Gen Z',
+    'AVERAGE'
   ],
 
   'Country': [
-    'USA',
-    'UK',
+    'Australia',
+    'Brazil',
     'France',
     'Germany',
-    'UAE',
-    'Saudi Arabia',
-    'Singapore',
     'India',
     'Japan',
-    'Australia',
-    'Brazil'
+    'Saudi Arabia',
+    'Singapore',
+    'UAE',
+    'UK',
+    'USA',
+    'AVERAGE'
   ]
 };
 
@@ -164,6 +168,21 @@ function createSegmentValues(
       ];
     })
   );
+}
+
+export function formatSubsegmentLabel(
+  subsegment
+) {
+
+  if (subsegment === 'AVERAGE') {
+    return 'Global Average';
+  }
+
+  if (subsegment === 'Industry - Other') 
+  {
+    return 'Other';
+  }
+  return subsegment;
 }
 
 function createHeadlineStats(

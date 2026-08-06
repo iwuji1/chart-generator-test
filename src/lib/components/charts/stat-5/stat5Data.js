@@ -3,7 +3,7 @@ import rawData from '$lib/datasets/stat_5.tsv?raw';
 export const segments = [
   'Job Level',
   'Industry',
-  'Age Generation',
+  'Generation',
   'Country'
 ];
 
@@ -14,10 +14,11 @@ export const segmentOptions = {
     'Senior Leader',
     'Mid-Level Leader',
     'First Level Supervisor/Manager',
-    'Individual Contributor'
+    'Individual Contributor',
+    'AVERAGE'
   ],
 
-  Industry: [
+  'Industry': [
     'Communications Services',
     'Consumer Markets',
     'Energy',
@@ -30,28 +31,31 @@ export const segmentOptions = {
     'Professional Services',
     'Sports',
     'Technology',
-    'Utility'
+    'Utility',
+    'AVERAGE'
   ],
 
-  'Age Generation': [
-    'Gen Z',
-    'Millennial',
+  'Generation': [
+    'Baby Boomers',
     'Gen X',
-    'Baby Boomers'
+    'Millennial',
+    'Gen Z',
+    'AVERAGE'
   ],
 
   'Country': [
-    'USA',
-    'UK',
+    'Australia',
+    'Brazil',
     'France',
     'Germany',
-    'UAE',
-    'Saudi Arabia',
-    'Singapore',
     'India',
     'Japan',
-    'Australia',
-    'Brazil'
+    'Saudi Arabia',
+    'Singapore',
+    'UAE',
+    'UK',
+    'USA',
+    'AVERAGE'
   ]
 };
 
@@ -121,11 +125,19 @@ function createSegmentValues(
 export function formatSubsegmentLabel(
   subsegment
 ) {
-  return subsegment ===
-    'Industry — Other'
-    ? 'Other'
-    : subsegment;
+
+  if (subsegment === 'AVERAGE') {
+    return 'Global Average';
+  }
+
+  if (subsegment === 'Industry - Other') 
+  {
+    return 'Other';
+  }
+  return subsegment;
 }
+
+
 
 /*
  * Supports both "Key" and "Kay" in case
@@ -247,7 +259,7 @@ export function parseStat2Data(
 
   if (columnHeaderIndex === -1) {
     throw new Error(
-      'Could not find the stat_2.tsv column header.'
+      'Could not find the stat_1.tsv column header.'
     );
   }
 
@@ -396,58 +408,33 @@ export function createLongData(
           activeSegment
         ] ?? {};
 
-      const totalPoint = {
-        id:
-          `${row.id}-total`,
+      return Object.entries(
+        cohortValues
+      )
+        .map(
+          ([cohort, value]) => ({
+            id:
+              `${row.id}-${activeSegment}-${cohort}`,
 
-        measure:
-          row.measure,
+            measure:
+              row.measure,
 
-        rowIndex,
+            rowIndex,
 
-        segment:
-          activeSegment,
+            segment:
+              activeSegment,
 
-        cohort:
-          'Total',
+            cohort,
 
-        value:
-          row.total
-      };
-
-      const cohortPoints =
-        Object.entries(
-          cohortValues
+            value:
+              Number(value)
+          })
         )
-          .map(
-            ([cohort, value]) => ({
-              id:
-                `${row.id}-${activeSegment}-${cohort}`,
-
-              measure:
-                row.measure,
-
-              rowIndex,
-
-              segment:
-                activeSegment,
-
-              cohort,
-
-              value:
-                Number(value)
-            })
+        .filter((point) =>
+          Number.isFinite(
+            point.value
           )
-          .filter((point) =>
-            Number.isFinite(
-              point.value
-            )
-          );
-
-      return [
-        totalPoint,
-        ...cohortPoints
-      ];
+        );
     }
   );
 }

@@ -1141,7 +1141,7 @@
 
   <div class="chart-heading">
     <h2>
-      Employee Workload and Capabilities - v3
+      Employee Workload and Capabilities
     </h2>
 
     <p class="chart-explanation">
@@ -1785,7 +1785,7 @@
     font-weight: 500;
     line-height: 1.15;
 
-    text-transform: none;
+    text-transform: uppercase;
   }
 
   /* Pull quotes */
@@ -1961,7 +1961,7 @@
 
     border:
       1.5px solid
-      #00634f;
+      var(--kf-green-dark);
 
     border-radius: 2px;
 
@@ -1970,7 +1970,7 @@
       1.4rem;
 
     background: #ffffff;
-    color: #00634f;
+    color: var(--kf-green-dark);
 
     font: inherit;
     font-size: 16px;
@@ -1981,19 +1981,18 @@
     transition:
       border-color 150ms ease,
       background 150ms ease,
-      color 150ms ease;
+      color 150ms ease,
+      transform 150ms ease;
   }
 
   .segment-selector button:hover,
   .segment-selector button:focus-visible {
-    border-color: #f2f8f6;
+    background: #f2f8f6;
     outline: none;
   }
 
   .segment-selector button.active {
-    border-color: #00634f;
-
-    background: #00634f;
+    background: var(--kf-green-dark);
     color: #ffffff;
   }
 
@@ -2015,49 +2014,7 @@
     margin: 0;
   }
 
-  .reset-comparison-button {
-    flex: 0 0 auto;
 
-    border:
-      1px solid
-      #8e9995;
-
-    border-radius: 999px;
-
-    padding:
-      0.4rem
-      0.7rem;
-
-    background: white;
-    color: #343936;
-
-    font: inherit;
-    font-size: 0.72rem;
-    font-weight: 700;
-
-    cursor: pointer;
-
-    transition:
-      border-color 150ms ease,
-      background 150ms ease,
-      color 150ms ease,
-      transform 150ms ease;
-  }
-
-  .reset-comparison-button:hover,
-  .reset-comparison-button:focus-visible {
-    border-color: #123f37;
-
-    background: #123f37;
-    color: white;
-
-    outline: none;
-  }
-
-  .reset-comparison-button:active {
-    transform:
-      scale(0.96);
-  }
 
 
   /* Chart */
@@ -2289,10 +2246,6 @@
 
     .cohort-control-heading {
       align-items: flex-start;
-    }
-
-    .reset-comparison-button {
-      font-size: 0.68rem;
     }
 
     .chart-wrapper {

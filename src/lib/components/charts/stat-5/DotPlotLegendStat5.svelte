@@ -1,7 +1,7 @@
 <script>
   import {
     formatSubsegmentLabel
-  } from './stat1Data.js';
+  } from './stat5Data.js';
 
   let {
     cohorts = [],
@@ -141,13 +141,24 @@
     <button
       type="button"
       class="legend-pill"
-      class:active={isActive(cohort)}
-      class:selected={isSelected(cohort)}
-      class:muted={isMuted(cohort)}
+      class:active={
+        isActive(cohort)
+      }
+      class:selected={
+        isSelected(cohort)
+      }
+      class:muted={
+        isMuted(cohort)
+      }
       style={`--pill-colour: ${getCohortTextColour(cohort)}`}
-      aria-pressed={isSelected(cohort)}
-      onmouseenter={() => onPreview(cohort)}
-      onmouseleave={ onClearPreview}
+      aria-pressed={
+        isSelected(cohort)
+      }
+      onmouseenter={() =>
+        onPreview(cohort)}
+      onmouseleave={
+        onClearPreview
+      }
       onfocus={() =>
         onPreview(cohort)}
       onblur={
@@ -190,6 +201,7 @@
     display: flex;
     flex-wrap: wrap;
     gap: 0.4rem;
+
     width: 100%;
   }
 
@@ -198,12 +210,21 @@
     gap: 0.42rem;
     align-items: center;
 
-    border: 1px solid transparent;
-    border-radius: 999px;
-    padding: 0.45rem 0.68rem;
+    border:
+      1px solid
+      transparent;
 
-    background: transparent;
-    color:#272c2a;
+    border-radius: 999px;
+
+    padding:
+      0.45rem
+      0.68rem;
+
+    background:
+      transparent;
+
+    color:
+      #272c2a;
 
     font: inherit;
     font-size: 14px;
@@ -221,7 +242,9 @@
   button:hover,
   button:focus-visible,
   button.active {
-    background:#f2f4f3;
+    background:
+      #f2f4f3;
+
     outline: none;
   }
 
@@ -244,9 +267,13 @@
     height: 0.85rem;
     flex: 0 0 auto;
 
-    box-sizing: border-box;
+    box-sizing:
+      border-box;
 
-    border: 2px solid #8f9995;
+    border:
+      2px solid
+      #8f9995;
+
     border-radius: 50%;
 
     background: white;
@@ -257,9 +284,12 @@
       border-color 150ms ease;
   }
 
-  button.active .legend-dot,
-  button.selected .legend-dot {
-    transform: scale(1.2);
+  button.active
+    .legend-dot,
+  button.selected
+    .legend-dot {
+    transform:
+      scale(1.2);
   }
 
   @media (

@@ -1,5 +1,6 @@
 <script>
   import * as d3 from 'd3';
+
   import {
     draw,
     fade
@@ -8,6 +9,9 @@
   import DotPlotTooltipStat3
     from './DotPlotTooltipStat3.svelte';
 
+  import DotPlotLegendStat3
+    from './DotPlotLegendStat3.svelte';
+
   import {
     SourceData,
     createLongData,
@@ -15,590 +19,749 @@
     segmentOptions
   } from './stat3Data.js';
 
-  import circleIcon from '$lib/assets/icons/circle.svg'
-  import lineIcon from '$lib/assets/icons/line.svg'
-
 
   let {
     sourceData = SourceData,
     initialSegment = 'Job Level'
   } = $props();
 
-  let selectedView = $state('headline');
+  /* ---------------------------------
+     View state
+     --------------------------------- */
 
-  const isHeadlineView = $derived(selectedView === 'headline')
+  let selectedView =
+    $state('average');
 
-  let selectedSegment = $state(
-    segments.includes(initialSegment)
-      ? initialSegment
-      : segments[0]
-  );
-
-  let selectedCohorts = $state([]);
-
-  const highlightedGroup = $derived(
-    selectedCohorts[0] ?? ''
-    );
-    
-    const comparisonGroup = $derived(
-        selectedCohorts[1] ?? ''
-    );
-
-    const availableComparisonCohorts =
+  const isAverageView =
     $derived(
-        cohorts.filter(
-        (cohort) =>
-            cohort !== highlightedGroup
-        )
+      selectedView === 'average'
     );
 
-  let hoveredCohort = $state(null);
-  let hoveredPoint = $state(null);
-
-  let tooltipX = $state(0);
-  let tooltipY = $state(0);
-
-  let containerWidth = $state(900);
-
-  /*
-   * Cohorts available for the currently selected
-   * employee segment.
-   */
-  const cohorts = $derived(
-    segmentOptions[selectedSegment] ?? []
-  );
-
-  /*
-   * Current plotted values.
-   */
-  const currentDots = $derived(
-    createLongData(
-      sourceData,
-      selectedSegment
-    )
-  );
-
-  const cohortPoints = $derived(
-    currentDots.filter(
-      (point) =>
-        point.cohort !== 'Total'
-    )
-  );
-
-  const orderedCohortPoints = $derived.by(() => {
-    return [...cohortPoints].sort(
-      (a, b) => {
-        const aSelected =
-          selectedCohorts.indexOf(
-            a.cohort
-          );
-
-        const bSelected =
-          selectedCohorts.indexOf(
-            b.cohort
-          );
-
-        /*
-        * Unselected first.
-        */
-        const aPriority =
-          aSelected === -1
-            ? 0
-            : aSelected === 1
-              ? 1
-              : 2;
-
-        const bPriority =
-          bSelected === -1
-            ? 0
-            : bSelected === 1
-              ? 1
-              : 2;
-
-        return (
-          aPriority -
-          bPriority
-        );
-      }
-    );
-  });
-
-  const totalPoints = $derived(
-    currentDots.filter(
-      (point) =>
-        point.cohort === 'Total'
-    )
-  );
-
-const headlinePoints =
-  $derived.by(() => {
-    return sourceData.flatMap(
-      (row, rowIndex) => {
-        return (
-          row.headlines ?? []
-        )
-          .filter(
-            (headline) =>
-              Number.isFinite(
-                headline.value
-              )
-          )
-          .map((headline) => ({
-            id:
-              `${row.id}-headline-${headline.index}`,
-
-            rowIndex,
-
-            headlineIndex:
-              headline.index,
-
-            value:
-              headline.value,
-
-            cohort:
-              headline.cohort,
-
-            measure:
-              row.measure,
-
-            text:
-              row.headlineText ?? ''
-          }));
-      }
-    );
-  });
-
-  /*
-   * Responsive SVG dimensions.
-   *
-   * The chart can horizontally scroll on smaller
-   * screens so the labels and marks remain legible.
-   */
-  const minimumSvgWidth = 760;
-
-  const width = $derived(
-    Math.max(
-      minimumSvgWidth,
-      Math.min(
-        900,
-        containerWidth
+  let selectedSegment =
+    $state(
+      segments.includes(
+        initialSegment
       )
-    )
-  );
-
-  const margin = {
-    top: 72,
-    right: 32,
-    bottom: 58,
-    left: 32
-  };
-
-  /*
-   * Reserve room above each row for its statement.
-   */
-  const rowHeight = 65;
-
-  function getRowY(rowIndex) {
-    return (
-      margin.top +
-      rowIndex * rowHeight +
-      38
+        ? initialSegment
+        : segments[0]
     );
-  }
 
-  const plotBottom = $derived(
-    sourceData.length > 0
-      ? getRowY(
-          sourceData.length - 1
-        ) + 24
-      : margin.top
-  );
-
-  const height = $derived(
-    plotBottom + margin.bottom
-  );
-
-  const xScale = $derived(
-    d3
-      .scaleLinear()
-      .domain([0, 100])
-      .range([
-        margin.left,
-        width - margin.right
-      ])
-  );
-
-  const axisTicks = [
-    0,
-    20,
-    40,
-    60,
-    80,
-    100
-  ];
 
   /*
-   * Comparison colours are assigned according to
-   * selection order.
+   * Selection order:
+   *
+   * [0] = highlighted cohort, green
+   * [1] = comparison cohort, blue
    */
-  const comparisonColours = [
-    '#05c690',
-    '#007da4'
-  ];
+  let selectedCohorts =
+    $state([]);
 
-  function getHeadlineColour(
-    headlineIndex
-  ) {
-    return comparisonColours[
-      headlineIndex %
-        comparisonColours.length
-    ];
-  }
+  const highlightedCohort =
+    $derived(
+      selectedCohorts[0] ?? ''
+    );
 
-  function getCohortColour(cohort) {
-    const selectedIndex =
-      selectedCohorts.indexOf(cohort);
+  const comparisonCohort =
+    $derived(
+      selectedCohorts[1] ?? ''
+    );
 
-    if (selectedIndex >= 0) {
-      return comparisonColours[
-        selectedIndex %
-          comparisonColours.length
-      ];
-    }
+  let hoveredCohort =
+    $state(null);
 
-    if (hoveredCohort === cohort) {
-      return comparisonColours[0];
-    }
+  let hoveredPoint =
+    $state(null);
 
-    return '#8f9995';
-  }
+  let tooltipX =
+    $state(0);
+
+  let tooltipY =
+    $state(0);
+
+  let containerWidth =
+    $state(900);
+
+  /* ---------------------------------
+     Segment data
+     --------------------------------- */
 
   /*
-   * The grey range remains stable while users switch
-   * between segments. It includes values from every
-   * cohort and every segment for each statement.
+   * Using $derived.by here makes the dependency
+   * on selectedSegment explicit.
    */
-  const fixedRanges = $derived.by(() => {
-    return sourceData.map(
-      (row, rowIndex) => {
-        const values = [
-          row.total,
+  const cohorts =
+    $derived.by(() => {
+      return (
+        segmentOptions[
+          selectedSegment
+        ] ?? []
+      );
+    });
 
-          ...Object.values(
-            row.segments ?? {}
-          ).flatMap(
-            (segmentValues) =>
-              Object.values(
-                segmentValues ?? {}
-              )
-          )
-        ].filter(Number.isFinite);
 
-        if (values.length === 0) {
-          return {
-            rowIndex,
-            minimum: null,
-            maximum: null
-          };
+  const currentDots =
+    $derived.by(() => {
+      return createLongData(
+        sourceData,
+        selectedSegment
+      );
+    });
+
+
+  /*
+   * The average value is repeated in each segment.
+   * Job Level is used as the source for the opening
+   * Global Average view.
+   */
+  const globalAverageDots =
+    $derived.by(() => {
+      return createLongData(
+        sourceData,
+        'Job Level'
+      ).filter(
+        (point) =>
+          point.cohort ===
+          'AVERAGE'
+      );
+    });
+
+
+  /*
+   * Selected cohorts render after unselected cohorts
+   * so that their dots appear visually on top.
+   */
+  const orderedCohortPoints =
+    $derived.by(() => {
+      return [
+        ...currentDots
+      ].sort((a, b) => {
+        function priority(
+          cohort
+        ) {
+          if (
+            cohort ===
+            highlightedCohort
+          ) {
+            return 3;
+          }
+
+          if (
+            cohort ===
+            comparisonCohort
+          ) {
+            return 2;
+          }
+
+          if (
+            cohort ===
+            hoveredCohort
+          ) {
+            return 1;
+          }
+
+          return 0;
         }
 
-        return {
-          rowIndex,
-          minimum: d3.min(values),
-          maximum: d3.max(values)
-        };
-      }
+        return (
+          priority(a.cohort) -
+          priority(b.cohort)
+        );
+      });
+    });
+
+
+  /* ---------------------------------
+     Responsive dimensions
+     --------------------------------- */
+
+  const isMobile =
+    $derived(
+      containerWidth <= 680
     );
-  });
+
+  const width =
+    $derived(
+      isMobile
+        ? Math.max(
+            280,
+            containerWidth
+          )
+        : Math.max(
+            760,
+            Math.min(
+              940,
+              containerWidth
+            )
+          )
+    );
+
+
+  const margin =
+    $derived(
+      isMobile
+        ? {
+            top: 70,
+            right: 18,
+            bottom: 46,
+            left: 18
+          }
+        : {
+            top: 72,
+            right: 32,
+            bottom: 58,
+            left: 32
+          }
+    );
+
+
+  const rowHeight =
+    $derived(
+      isMobile
+        ? 112
+        : 92
+    );
+
+  const measureLabelHeight =
+    $derived(
+      isMobile
+        ? 72
+        : 56
+    );
+
+  const measureLabelOffset =
+    $derived(
+      isMobile
+        ? 96
+        : 78
+    );
+
+  const rowPlotOffset =
+    $derived(
+      isMobile
+        ? 62
+        : 52
+    );
+
+
+  function getRowY(
+    rowIndex
+  ) {
+    return (
+      margin.top +
+      rowIndex *
+        rowHeight +
+      rowPlotOffset
+    );
+  }
+
+
+  const plotBottom =
+    $derived(
+      sourceData.length > 0
+        ? getRowY(
+            sourceData.length -
+              1
+          ) + 24
+        : margin.top
+    );
+
+
+  const height =
+    $derived(
+      plotBottom +
+        margin.bottom
+    );
+
+
+  const xScale =
+    $derived(
+      d3
+        .scaleLinear()
+        .domain([
+          0,
+          100
+        ])
+        .range([
+          margin.left,
+          width -
+            margin.right
+        ])
+    );
+
+
+  const axisTicks =
+    $derived(
+      isMobile
+        ? [
+            0,
+            25,
+            50,
+            75,
+            100
+          ]
+        : [
+            0,
+            20,
+            40,
+            60,
+            80,
+            100
+          ]
+    );
+
+
+  /* ---------------------------------
+     Colours
+     --------------------------------- */
+
+  const highlightColour =
+    '#009b77';
+
+  const highlightBorderColour =
+    '#00634f';
+
+  const comparisonColour =
+    '#007da4';
+
+  const defaultDotFill =
+    '#e3e6e5';
+
+  const defaultDotStroke =
+    '#8f9995';
+
+
+  function getCohortColour(
+    cohort
+  ) {
+    if (
+      cohort ===
+      highlightedCohort
+    ) {
+      return highlightColour;
+    }
+
+    if (
+      cohort ===
+      comparisonCohort
+    ) {
+      return comparisonColour;
+    }
+
+    if (
+      cohort ===
+      hoveredCohort
+    ) {
+      return highlightColour;
+    }
+
+    return defaultDotStroke;
+  }
+
 
   /*
-   * Hover connection.
-   *
-   * It only appears when no cohorts have been locked
-   * into the comparison state.
-   */
-  const hoverSeries = $derived.by(() => {
+  * Used for selected value labels and
+  * selected legend-pill borders.
+  */
+  function getCohortTextColour(
+    cohort
+  ) {
     if (
-      !hoveredCohort ||
-      selectedCohorts.length > 0
+      cohort ===
+      highlightedCohort
+    ) {
+      return highlightBorderColour;
+    }
+
+    if (
+      cohort ===
+      comparisonCohort
+    ) {
+      return comparisonColour;
+    }
+
+    if (
+      cohort ===
+      hoveredCohort
+    ) {
+      return highlightBorderColour;
+    }
+
+    return '#272c2a';
+  }
+
+
+  function getDotFill(
+    cohort
+  ) {
+    /*
+    * Primary selection:
+    * green fill.
+    */
+    if (
+      cohort ===
+      highlightedCohort
+    ) {
+      return highlightColour;
+    }
+
+    /*
+    * Comparison selection:
+    * white fill with blue border.
+    */
+    if (
+      cohort ===
+      comparisonCohort
+    ) {
+      return '#ffffff';
+    }
+
+    /*
+    * Hover preview:
+    * white fill with dark-green border.
+    */
+    if (
+      cohort ===
+      hoveredCohort
+    ) {
+      return '#ffffff';
+    }
+
+    return defaultDotFill;
+  }
+
+
+  function getDotStroke(
+    cohort
+  ) {
+    if (
+      cohort ===
+      highlightedCohort
+    ) {
+      return highlightBorderColour;
+    }
+
+    if (
+      cohort ===
+      comparisonCohort
+    ) {
+      return comparisonColour;
+    }
+
+    if (
+      cohort ===
+      hoveredCohort
+    ) {
+      return highlightBorderColour;
+    }
+
+    return defaultDotStroke;
+  }
+
+
+  /* ---------------------------------
+     Comparison data
+     --------------------------------- */
+
+  const selectedSeries =
+    $derived.by(() => {
+      return selectedCohorts.map(
+        (cohort) => ({
+          cohort,
+
+          points:
+            currentDots
+              .filter(
+                (point) =>
+                  point.cohort ===
+                  cohort
+              )
+              .sort(
+                (a, b) =>
+                  a.rowIndex -
+                  b.rowIndex
+              )
+        })
+      );
+    });
+
+
+  const comparisonRows =
+    $derived.by(() => {
+      if (
+        selectedSeries.length !==
+        2
+      ) {
+        return [];
+      }
+
+      const [
+        firstSeries,
+        secondSeries
+      ] =
+        selectedSeries;
+
+      return sourceData
+        .map(
+          (
+            row,
+            rowIndex
+          ) => {
+            const firstPoint =
+              firstSeries.points.find(
+                (point) =>
+                  point.rowIndex ===
+                  rowIndex
+              );
+
+            const secondPoint =
+              secondSeries.points.find(
+                (point) =>
+                  point.rowIndex ===
+                  rowIndex
+              );
+
+            if (
+              !firstPoint ||
+              !secondPoint
+            ) {
+              return null;
+            }
+
+            return {
+              rowIndex,
+
+              firstCohort:
+                firstSeries.cohort,
+
+              secondCohort:
+                secondSeries.cohort,
+
+              firstPoint,
+              secondPoint
+            };
+          }
+        )
+        .filter(Boolean);
+    });
+
+
+  /* ---------------------------------
+     View selection
+     --------------------------------- */
+
+  function selectAverageView() {
+    selectedView =
+      'average';
+
+    selectedCohorts = [];
+    hoveredCohort = null;
+    hoveredPoint = null;
+  }
+
+  function getDefaultComparison(
+    segment
+  ) {
+    const availableCohorts =
+      segmentOptions[segment] ?? [];
+
+    const comparableCohorts =
+      availableCohorts.filter(
+        (cohort) =>
+          cohort !== 'AVERAGE'
+      );
+
+    if (
+      comparableCohorts.length === 0
     ) {
       return [];
     }
 
-    return cohortPoints
-      .filter(
-        (point) =>
-          point.cohort ===
-          hoveredCohort
-      )
-      .sort(
-        (a, b) =>
-          a.rowIndex -
-          b.rowIndex
-      );
-  });
-
-  const lineGenerator = $derived(
-    d3
-      .line()
-      .defined(
-        (point) =>
-          Number.isFinite(
-            point.value
-          )
-      )
-      .x(
-        (point) =>
-          xScale(point.value)
-      )
-      .y(
-        (point) =>
-          getRowY(point.rowIndex)
-      )
-      .curve(
-        d3.curveCatmullRom.alpha(
-          0.5
-        )
-      )
-  );
-
-  const hoverLinePath = $derived(
-    hoverSeries.length > 1
-      ? lineGenerator(hoverSeries)
-      : null
-  );
-
-  /*
-   * Cohorts selected for persistent comparison.
-   */
-  const selectedSeries = $derived(
-    selectedCohorts.map(
-      (cohort) => ({
-        cohort,
-
-        points: cohortPoints
-          .filter(
-            (point) =>
-              point.cohort === cohort
-          )
-          .sort(
-            (a, b) =>
-              a.rowIndex -
-              b.rowIndex
-          )
-      })
-    )
-  );
-
-  /*
-   * One horizontal comparison line is drawn on each
-   * row when exactly two cohorts are selected.
-   */
-  const comparisonRows = $derived.by(() => {
-    if (selectedSeries.length !== 2) {
-      return [];
+    if (
+      comparableCohorts.length === 1
+    ) {
+      return [
+        comparableCohorts[0]
+      ];
     }
 
-    const [
-      firstSeries,
-      secondSeries
-    ] = selectedSeries;
+    return [
+      comparableCohorts[0],
+      comparableCohorts[
+        comparableCohorts.length - 1
+      ]
+    ];
+  }
 
-    return sourceData
-      .map((row, rowIndex) => {
-        const firstPoint =
-          firstSeries.points.find(
-            (point) =>
-              point.rowIndex ===
-              rowIndex
-          );
 
-        const secondPoint =
-          secondSeries.points.find(
-            (point) =>
-              point.rowIndex ===
-              rowIndex
-          );
+  function selectSegment(
+    segment
+  ) {
+    if (
+      !segments.includes(
+        segment
+      )
+    ) {
+      return;
+    }
 
-        if (
-          !firstPoint ||
-          !secondPoint
-        ) {
-          return null;
-        }
+    selectedView =
+      'explore';
 
-        return {
-          rowIndex,
-          firstCohort:
-            firstSeries.cohort,
-          secondCohort:
-            secondSeries.cohort,
-          firstPoint,
-          secondPoint
-        };
-      })
-      .filter(Boolean);
-  });
-
-  function selectSegment(segment) {
-    selectedView = 'explore';
-    selectedSegment = segment;
+    selectedSegment =
+      segment;
 
     /*
-     * Selections from one segment may not exist in
-     * another segment.
+     * Reset selections because cohorts differ
+     * between employee segments.
      */
-    selectedCohorts = [];
+    selectedCohorts = getDefaultComparison(
+      segment
+    );
     hoveredCohort = null;
     hoveredPoint = null;
   }
 
-  function selectHeadlineView() {
-    selectedView = 'headline';
-    selectedCohorts = [];
-    hoveredCohort = null;
-    hoveredPoint = null;
-  }
 
-  function selectCohort(cohort) {
+  /* ---------------------------------
+     Cohort selection
+     --------------------------------- */
+
+  function selectCohort(
+    cohort
+  ) {
+    if (
+      !cohorts.includes(
+        cohort
+      )
+    ) {
+      return;
+    }
+
     const selectedIndex =
       selectedCohorts.indexOf(
         cohort
       );
 
-    /*
-    * Clicking comparison removes comparison only.
-    */
-    if (selectedIndex === 1) {
-      selectedCohorts = [
-        selectedCohorts[0]
-      ];
-
-      return;
-    }
 
     /*
-    * Highlight cannot be removed while a
-    * comparison is active.
-    */
+     * Clicking the only selected cohort clears it.
+     */
     if (
-      selectedIndex === 0 &&
-      selectedCohorts.length === 2
+      selectedIndex >= 0
     ) {
+      selectedCohorts = selectedCohorts.filter(
+        (selected) =>
+          selected !== cohort
+      )
+
+      hoveredCohort = null;
+      hoveredPoint = null;
       return;
     }
 
     /*
-    * Clicking the sole highlighted cohort clears it.
-    */
-    if (
-      selectedIndex === 0 &&
-      selectedCohorts.length === 1
-    ) {
-      selectedCohorts = [];
-
-      return;
-    }
-
-    /*
-    * Nothing selected → highlight.
-    */
-    if (
-      selectedCohorts.length === 0
-    ) {
-      selectedCohorts = [
-        cohort
-      ];
-
-      return;
-    }
-
-    /*
-    * Highlight exists → add comparison.
-    */
-    if (
-      selectedCohorts.length === 1
-    ) {
-      selectedCohorts = [
-        selectedCohorts[0],
-        cohort
-      ];
-
-      return;
-    }
-
-    /*
-    * Both exist → replace comparison.
-    */
+   * No selection: make this the primary
+   * green cohort.
+   */
+  if (
+    selectedCohorts.length === 0
+  ) {
     selectedCohorts = [
-      selectedCohorts[0],
       cohort
     ];
+
+    return;
   }
 
-  function previewCohort(cohort) {
-    hoveredCohort = cohort;
+  /*
+   * One selection: add the blue comparison.
+   */
+  if (
+    selectedCohorts.length === 1
+  ) {
+    selectedCohorts = [
+      ...selectedCohorts,
+      cohort
+    ];
+
+    return;
   }
+
+  /*
+   * Two selections already exist:
+   * keep the green cohort and replace blue.
+   */
+  selectedCohorts = [
+    selectedCohorts[0],
+    cohort
+  ];
+}
+
+
+  function resetComparison() {
+    selectedCohorts = getDefaultComparison(
+      selectedSegment
+    );
+    hoveredCohort = null;
+    hoveredPoint = null;
+  }
+
+
+  /* ---------------------------------
+     Legend preview
+     --------------------------------- */
+
+  function previewCohort(
+    cohort
+  ) {
+    hoveredCohort =
+      cohort;
+  }
+
 
   function clearPreview() {
-    /*
-     * Do not clear a dot hover while the tooltip is
-     * still active.
-     */
     if (!hoveredPoint) {
       hoveredCohort = null;
     }
   }
 
-  function clearSelection() {
-    selectedCohorts = [];
-    hoveredCohort = null;
-    hoveredPoint = null;
-  }
 
-  function clearComparisonGroup() {
-    if (!highlightedGroup) return;
-
-    selectedCohorts = [
-      highlightedGroup
-    ];
-
-    hoveredPoint = null;
-    hoveredCohort = null;
-  }
-
-  function clearHighlightedGroup() {
-    if (comparisonGroup) return;
-
-    selectedCohorts = [];
-
-    hoveredPoint = null;
-    hoveredCohort = null;
-  }
-
-
+  /* ---------------------------------
+     Tooltip
+     --------------------------------- */
 
   function showTooltip(
     event,
     point
   ) {
-    hoveredPoint = point;
-    hoveredCohort = point.cohort;
+    hoveredPoint =
+      point;
 
-    updateTooltipPosition(event);
+    hoveredCohort =
+      point.cohort;
+
+    updateTooltipPosition(
+      event
+    );
   }
+
 
   function updateTooltipPosition(
     event
   ) {
-    tooltipX = event.clientX;
-    tooltipY = event.clientY;
+    tooltipX =
+      event.clientX;
+
+    tooltipY =
+      event.clientY;
   }
+
 
   function hideTooltip() {
     hoveredPoint = null;
     hoveredCohort = null;
   }
+
 
   function handleDotKeydown(
     event,
@@ -615,462 +778,558 @@ const headlinePoints =
       );
     }
 
-    if (event.key === 'Escape') {
-      clearSelection();
+    if (
+      event.key ===
+      'Escape'
+    ) {
+      resetComparison();
     }
   }
 
-  function isSelected(cohort) {
+
+  /* ---------------------------------
+     Dot appearance
+     --------------------------------- */
+
+  function isSelected(
+    cohort
+  ) {
     return selectedCohorts.includes(
       cohort
     );
   }
 
-  function selectHighlightedGroup(
-    event
+
+  function isHovered(
+    cohort
+  ) {
+    return (
+      hoveredCohort ===
+      cohort
+    );
+  }
+
+
+  function isHighlighted(
+    cohort
+  ) {
+    return (
+      isSelected(cohort) ||
+      isHovered(cohort)
+    );
+  }
+
+  function getDotOpacity(
+    cohort
+  ) {
+    /*
+     * Nothing selected or previewed:
+     * hide all exploratory dots.
+     */
+    if (
+      selectedCohorts.length ===
+        0 &&
+      !hoveredCohort
     ) {
-    const cohort =
-        event.currentTarget.value;
+      return 0;
+    }
 
-    hoveredPoint = null;
-    hoveredCohort = null;
 
-    if (!cohort) {
-        selectedCohorts = [];
-        return;
+    /*
+     * Selected dots stay visible.
+     */
+    if (
+      isSelected(cohort)
+    ) {
+      return 1;
+    }
+
+
+    /*
+     * Legend hover temporarily reveals only the
+     * hovered cohort.
+     */
+    if (
+      isHovered(cohort)
+    ) {
+      return 1;
+    }
+
+
+    return 0;
+  }
+
+
+  function isDotHidden(
+    cohort
+  ) {
+    return (
+      getDotOpacity(cohort) ===
+      0
+    );
+  }
+
+
+  function getDotRadius(
+    cohort
+  ) {
+    return isHighlighted(
+      cohort
+    )
+      ? 12
+      : 10;
+  }
+
+
+  function getGradientId(
+    rowIndex
+  ) {
+    return (
+      `stat-1-v3-gradient-${rowIndex}`
+    );
+  }
+
+
+  /*
+   * Ensure the gradient always runs in the correct
+   * geometric direction, even when the green value
+   * is greater than the blue value.
+   */
+  function getGradientDetails(
+    comparison
+  ) {
+    const firstValue =
+      comparison.firstPoint.value;
+
+    const secondValue =
+      comparison.secondPoint.value;
+
+    if (
+      firstValue <= secondValue
+    ) {
+      return {
+        x1:
+          xScale(firstValue),
+
+        x2:
+          xScale(secondValue),
+
+        startColour:
+          getCohortColour(
+            comparison.firstCohort
+          ),
+
+        endColour:
+          getCohortColour(
+            comparison.secondCohort
+          )
+      };
+    }
+
+    return {
+      x1:
+        xScale(secondValue),
+
+      x2:
+        xScale(firstValue),
+
+      startColour:
+        getCohortColour(
+          comparison.secondCohort
+        ),
+
+      endColour:
+        getCohortColour(
+          comparison.firstCohort
+        )
+    };
+  }
+
+  const valueLabelGap = 20;
+
+  function getOtherSelectedPoint(
+    point,
+    cohort
+  ) {
+    const otherCohort =
+      selectedCohorts.find(
+        (selected) =>
+          selected !== cohort
+      );
+
+    if (!otherCohort) {
+      return null;
+    }
+
+    return (
+      currentDots.find(
+        (candidate) =>
+          candidate.rowIndex ===
+            point.rowIndex &&
+          candidate.cohort ===
+            otherCohort
+      ) ?? null
+    );
+  }
+
+
+  /*
+  * Position labels outside the comparison:
+  *
+  * leftmost dot  → label on its left
+  * rightmost dot → label on its right
+  */
+  function getLabelSide(
+    point,
+    cohort
+  ) {
+    const otherPoint =
+      getOtherSelectedPoint(
+        point,
+        cohort
+      );
+
+    /*
+    * Only one cohort is selected.
+    * Prefer the right, unless the dot is close
+    * to the chart's right-hand edge.
+    */
+    if (!otherPoint) {
+      return point.value >= 88
+        ? 'left'
+        : 'right';
+    }
+
+    if (
+      point.value <
+      otherPoint.value
+    ) {
+      return 'left';
+    }
+
+    if (
+      point.value >
+      otherPoint.value
+    ) {
+      return 'right';
     }
 
     /*
-    * Preserve the current comparison cohort where
-    * possible, unless it matches the new highlighted
-    * cohort.
+    * If both values are identical, put one
+    * label on either side of the shared dot.
     */
-    const existingComparison =
-        selectedCohorts[1];
-
-    selectedCohorts =
-        existingComparison &&
-        existingComparison !== cohort
-        ? [
-            cohort,
-            existingComparison
-            ]
-        : [cohort];
-    }
-
-    function selectComparisonGroup(
-        event
-    ) {
-    const cohort =
-        event.currentTarget.value;
-
-    hoveredPoint = null;
-    hoveredCohort = null;
-
-    if (!highlightedGroup) {
-        selectedCohorts = [];
-        return;
-    }
-
-    if (!cohort) {
-        selectedCohorts = [
-        highlightedGroup
-        ];
-
-        return;
-    }
-
-    selectedCohorts = [
-        highlightedGroup,
+    return (
+      selectedCohorts.indexOf(
         cohort
-    ];
-    }
-
-    function previewSelectOption(
-        event
-    ) {
-    const cohort =
-        event.currentTarget.value;
-
-    hoveredCohort =
-        cohort || null;
-    }
-
-    function clearSelectPreview() {
-        if (!hoveredPoint) {
-            hoveredCohort = null;
-        }
-    }
-
-  function isHovered(cohort) {
-    return (
-      hoveredCohort === cohort
+      ) === 0
+        ? 'left'
+        : 'right'
     );
   }
 
-  function isHighlighted(cohort) {
-    return (
-      isSelected(cohort) ||
-      (
-        selectedCohorts.length === 0 &&
-        isHovered(cohort)
-      )
+
+  function getLabelX(
+    point,
+    cohort
+  ) {
+    const side =
+      getLabelSide(
+        point,
+        cohort
+      );
+
+    const dotX =
+      xScale(
+        point.value
+      );
+
+    if (side === 'left') {
+      return Math.max(
+        margin.left + 2,
+        dotX - valueLabelGap
+      );
+    }
+
+    return Math.min(
+      width -
+        margin.right -
+        2,
+      dotX +
+        valueLabelGap
     );
   }
 
-  function getDotFill(cohort) {
-    if (isHighlighted(cohort)) {
-      return getCohortColour(cohort);
-    }
 
-    return '#e3e6e5';
-  }
-
-  function getDotStroke(cohort) {
-    if (isHighlighted(cohort)) {
-      return '#111111';
-    }
-
-    return '#111111';
-  }
-
-  function getDotOpacity(cohort) {
-    if (
-      selectedCohorts.length === 0
-    ) {
-      return 0.5;
-    }
-
-    if (
-      selectedCohorts.length === 1
-    ) {
-      return isSelected(cohort)
-        ? 1
-        : 0.35;
-    }
-
-    return isSelected(cohort)
-      ? 1
-      : 0;
-  }
-
-  function isDotHidden(cohort) {
+  function getLabelAnchor(
+    point,
+    cohort
+  ) {
     return (
-      selectedCohorts.length === 2 &&
-      !isSelected(cohort)
+      getLabelSide(
+        point,
+        cohort
+      ) === 'left'
+        ? 'end'
+        : 'start'
     );
   }
 
-  function getDotRadius(cohort) {
-    return isHighlighted(cohort)
-      ? 9
-      : 6;
-  }
-
-  function getGradientId(rowIndex) {
-    return (
-      `stat-1-comparison-gradient-${rowIndex}`
-    );
-  }
 
   function getLabelY(
     point,
     cohort
   ) {
-    const selectionIndex =
-      selectedCohorts.indexOf(
+    const otherPoint =
+      getOtherSelectedPoint(
+        point,
         cohort
       );
 
     /*
-     * When two labels are close together, place the
-     * first above the row and the second beneath it.
-     */
-    return selectionIndex === 0
-      ? getRowY(point.rowIndex) - 13
-      : getRowY(point.rowIndex) + 23;
+    * If the two values are exactly the same,
+    * separate the labels vertically as well.
+    */
+    if (
+      otherPoint &&
+      point.value ===
+        otherPoint.value
+    ) {
+      return (
+        selectedCohorts.indexOf(
+          cohort
+        ) === 0
+          ? getRowY(
+              point.rowIndex
+            ) - 25
+          : getRowY(
+              point.rowIndex
+            ) + 25
+      );
+    }
+
+    return (
+      getRowY(
+        point.rowIndex
+      ) + 6
+    );
   }
+
+  function handleDotClick(
+    event,
+    point
+  ) {
+    event.stopPropagation();
+
+    /*
+    * On touch devices, tapping performs the
+    * information-preview role of hover.
+    */
+    showTooltip(
+      event,
+      point
+    );
+
+    selectCohort(
+      point.cohort
+    );
+  }
+
 </script>
 
+
 <section class="dot-plot-stat-1">
+
   <div class="chart-heading">
     <h2>
-      Work & Capacity
+      THE TWO-JOB JOB
     </h2>
 
-<p class="chart-explanation">
-  This chart shows the levels of agreement with selected statements. Each
-  <span class="inline-key cohort-key">
-    <img
-      src={circleIcon}
-      alt=""
-      aria-hidden="true"
-    />
-  </span>
-  represents a distinct cohort, the
-  <span class="inline-key average-key">
-    <span
-      class="average-marker-icon"
-      aria-hidden="true"
-    ></span>
-  </span>
-  marker is the average response percentage and the grey bar shows the
-  <span class="inline-key range-key">
-    full range
-  </span>
-  of lowest to highest responses across every cohort. The initial view shows headline insights, you can then 
-  filter to explore different segment groups. You can highlight 
-  <span class="inline-key highlight-key" style:background={comparisonColours[0]}>
-    cohorts
-  </span>
-  to see all their related values, and also compare
-  <span class="inline-key compare-key" style:background={comparisonColours[1]}>
-    responses
-  </span>
-  with another cohort.
-</p>
+    <p class="chart-explanation">
+      This chart shows the levels of agreement with
+      selected statements. The initial view shows the
+      global average, you can then filter to explore
+      different segment groups. Clicking on a cohort
+      will highlight its related values, you can then
+      click to choose to compare responses with another
+      cohort.
+    </p>
   </div>
+
 
   <div class="sticky-controls">
     <div class="controls">
+
       <div class="segment-control">
         <p class="control-label">
-          Select View
+          Select view
         </p>
-          <div
-            class="segment-selector"
-            role="group"
-            aria-label="Select chart view"
+
+        <div
+          class="segment-selector"
+          role="group"
+          aria-label="Select chart view"
+        >
+          <button
+            type="button"
+            class:active={
+              isAverageView
+            }
+            aria-pressed={
+              isAverageView
+            }
+            onclick={
+              selectAverageView
+            }
           >
+            Global Average
+          </button>
+
+          {#each
+            segments
+            as segment
+          }
             <button
               type="button"
               class:active={
-                isHeadlineView
+                !isAverageView &&
+                selectedSegment ===
+                  segment
               }
               aria-pressed={
-                isHeadlineView
+                !isAverageView &&
+                selectedSegment ===
+                  segment
               }
-              onclick={
-                selectHeadlineView
-              }
+              onclick={() =>
+                selectSegment(
+                  segment
+                )}
             >
-              Global Average
+              {segment}
             </button>
-
-            {#each segments as segment}
-              <button
-                type="button"
-                class:active={
-                  !isHeadlineView &&
-                  selectedSegment === segment
-                }
-                aria-pressed={
-                  !isHeadlineView &&
-                  selectedSegment === segment
-                }
-                onclick={() =>
-                  selectSegment(segment)}
-              >
-                {segment}
-              </button>
-            {/each}
-          </div>
-      </div>
-
-      {#if !isHeadlineView}
-      <div class="cohort-control">
-      <div class="comparison-selectors">
-
-        <!-- HIGHLIGHT -->
-        <div class="select-field">
-          <label
-            class="inline-key select-label-1"
-            for="highlight-cohort"
-          >
-            HIGHLIGHT COHORT
-          </label>
-
-          <div class="select-input-row">
-            <select
-              id="highlight-cohort"
-              value={highlightedGroup}
-              onchange={selectHighlightedGroup}
-              oninput={previewSelectOption}
-              onfocus={previewSelectOption}
-              onblur={clearSelectPreview}
-            >
-              <option value="">
-                Select a cohort
-              </option>
-
-              {#each cohorts as cohort}
-                <option value={cohort}>
-                  {cohort}
-                </option>
-              {/each}
-            </select>
-
-            <button
-              type="button"
-              class="
-                reset-selection
-                reset-highlight
-              "
-              onclick={clearHighlightedGroup}
-              disabled={
-                !highlightedGroup ||
-                !!comparisonGroup
-              }
-              aria-label="Clear highlighted cohort"
-              title={
-                comparisonGroup
-                  ? 'Remove comparison first'
-                  : 'Clear highlighted cohort'
-              }
-            >
-              <span aria-hidden="true">
-                ×
-              </span>
-            </button>
-          </div>
-        </div>
-
-
-        <!-- COMPARE -->
-        <div
-          class="select-field"
-          class:disabled-field={
-            !highlightedGroup
-          }
-        >
-          <label
-            class="inline-key select-label-2"
-            for="compare-cohort"
-          >
-            COMPARE WITH
-          </label>
-
-          <div class="select-input-row">
-            <select
-              id="compare-cohort"
-              value={comparisonGroup}
-              disabled={!highlightedGroup}
-              onchange={selectComparisonGroup}
-              oninput={previewSelectOption}
-              onfocus={previewSelectOption}
-              onblur={clearSelectPreview}
-            >
-              <option value="">
-                {highlightedGroup
-                  ? 'Select another cohort'
-                  : 'Choose a highlight cohort first'}
-              </option>
-
-              {#each
-                availableComparisonCohorts
-                as cohort
-              }
-                <option value={cohort}>
-                  {cohort}
-                </option>
-              {/each}
-            </select>
-
-            <button
-              type="button"
-              class="
-                reset-selection
-                reset-compare
-              "
-              onclick={clearComparisonGroup}
-              disabled={!comparisonGroup}
-              aria-label="Clear comparison cohort"
-              title="Clear comparison cohort"
-            >
-              <span aria-hidden="true">
-                ×
-              </span>
-            </button>
-          </div>
+          {/each}
         </div>
       </div>
+
+
+      {#if !isAverageView}
+        <!--
+          Keying this block forces the legend to be
+          recreated whenever the selected segment changes.
+        -->
+        {#key selectedSegment}
+          <div class="cohort-control">
+            <div class="cohort-control-heading">
+              <p class="control-label">
+                Select up to two cohorts
+              </p>
+            </div>
+
+            <DotPlotLegendStat3
+              {cohorts}
+              {getCohortTextColour}
+              {selectedCohorts}
+              {hoveredCohort}
+              onSelect={
+                selectCohort
+              }
+              onPreview={
+                previewCohort
+              }
+              onClearPreview={
+                clearPreview
+              }
+            />
+          </div>
+        {/key}
+      {/if}
+
     </div>
-    {/if}
   </div>
+
 
   <div
     class="chart-wrapper"
-    bind:clientWidth={containerWidth}
+    bind:clientWidth={
+      containerWidth
+    }
+    onclick= {() => {
+      hoveredPoint = null;
+      hoveredCohort = null;
+    }}
   >
     <svg
       {width}
       {height}
-      viewBox={`0 0 ${width} ${height}`}
+      viewBox={`
+        0 0
+        ${width}
+        ${height}
+      `}
       role="img"
       aria-labelledby="
         stat-1-dot-plot-title
         stat-1-dot-plot-description
       "
     >
+
       <title id="stat-1-dot-plot-title">
-        {#if isHeadlineView}
-          Headline findings for how employees react
-          to the use of AI
+        {#if isAverageView}
+          Global average agreement with selected
+          workload and capability statements
         {:else}
-          How employees react to the use of AI by
-          {selectedSegment}
+          Agreement with workload and capability
+          statements by {selectedSegment}
         {/if}
       </title>
 
       <desc id="stat-1-dot-plot-description">
-        {#if isHeadlineView}
-          Each row represents a survey statement.
-          Coloured circles show the editorially selected
-          headline findings. Grey bars show the range
-          across employee cohorts and black vertical
-          markers show the average response.
-        {:else}
-          Each row represents a survey statement.
-          Circles represent employee cohorts. Grey bars
-          show the range across employee groups and black
-          vertical markers show the average response.
-        {/if}
+        Each row represents a survey statement.
+        Selecting an employee segment displays its
+        available cohorts. The first selected cohort is
+        green and a second comparison cohort is blue.
       </desc>
 
+
       <defs>
-        {#each comparisonRows as comparison}
+        {#each
+          comparisonRows
+          as comparison
+        }
+          {@const gradient =
+            getGradientDetails(
+              comparison
+            )}
+
           <linearGradient
             id={getGradientId(
               comparison.rowIndex
             )}
             gradientUnits="userSpaceOnUse"
-            x1={xScale(
-              comparison.firstPoint.value
-            )}
-            x2={xScale(
-              comparison.secondPoint.value
-            )}
+            x1={gradient.x1}
+            x2={gradient.x2}
             y1="0"
             y2="0"
           >
             <stop
               offset="0%"
-              stop-color={getCohortColour(
-                comparison.firstCohort
-              )}
+              stop-color={
+                gradient.startColour
+              }
             />
 
             <stop
               offset="100%"
-              stop-color={getCohortColour(
-                comparison.secondCohort
-              )}
+              stop-color={
+                gradient.endColour
+              }
             />
           </linearGradient>
         {/each}
       </defs>
 
-      <!-- Percentage axis -->
+
+      <!-- Axis -->
       <g
         class="axis"
         aria-hidden="true"
@@ -1086,12 +1345,18 @@ const headlinePoints =
         <line
           class="axis-baseline"
           x1={margin.left}
-          x2={width - margin.right}
+          x2={
+            width -
+            margin.right
+          }
           y1="34"
           y2="34"
         />
 
-        {#each axisTicks as tick}
+        {#each
+          axisTicks
+          as tick
+        }
           <line
             class="axis-tick-line"
             x1={xScale(tick)}
@@ -1106,7 +1371,11 @@ const headlinePoints =
             y="53"
             text-anchor="middle"
           >
-            {tick}<tspan font-size= "7" baseline-shift="super">%</tspan>
+            {tick}<tspan
+              font-size="7"
+              class="percent-sign"
+              baseline-shift="super"
+            >%</tspan>
           </text>
 
           <line
@@ -1119,25 +1388,34 @@ const headlinePoints =
         {/each}
       </g>
 
-      <!-- Stable background rows and ranges -->
-      <g class="rows">
-        {#each sourceData as row, rowIndex}
-          {@const rowY =
-            getRowY(rowIndex)}
 
-          {@const range =
-            fixedRanges[rowIndex]}
+      <!-- Statement rows -->
+      <g class="rows">
+        {#each
+          sourceData
+          as row,
+          rowIndex
+        }
+          {@const rowY =
+            getRowY(
+              rowIndex
+            )}
 
           <g class="statement-row">
             <foreignObject
               x={margin.left}
-              y={rowY - 62}
+              y={
+                rowY -
+                measureLabelOffset
+              }
               width={
                 width -
                 margin.left -
                 margin.right
               }
-              height="38"
+              height={
+                measureLabelHeight
+              }
             >
               <div
                 xmlns="http://www.w3.org/1999/xhtml"
@@ -1150,46 +1428,40 @@ const headlinePoints =
             <line
               class="row-guide"
               x1={margin.left}
-              x2={width - margin.right}
+              x2={
+                width -
+                margin.right
+              }
               y1={rowY}
               y2={rowY}
             />
-
-            {#if
-              Number.isFinite(
-                range?.minimum
-              ) &&
-              Number.isFinite(
-                range?.maximum
-              )
-            }
-              <line
-                class="range-line"
-                x1={xScale(
-                  range.minimum
-                )}
-                x2={xScale(
-                  range.maximum
-                )}
-                y1={rowY}
-                y2={rowY}
-              />
-            {/if}
           </g>
         {/each}
       </g>
 
-      <!-- Two-cohort comparison lines -->
-      {#if !isHeadlineView && comparisonRows.length > 0}
+
+      <!-- Comparison gradients -->
+      {#if
+        !isAverageView &&
+        comparisonRows.length >
+          0
+      }
         <g class="comparison-lines">
-          {#each comparisonRows as comparison}
+          {#each
+            comparisonRows
+            as comparison
+          }
             <line
               class="comparison-line-outline"
               x1={xScale(
-                comparison.firstPoint.value
+                comparison
+                  .firstPoint
+                  .value
               )}
               x2={xScale(
-                comparison.secondPoint.value
+                comparison
+                  .secondPoint
+                  .value
               )}
               y1={getRowY(
                 comparison.rowIndex
@@ -1202,10 +1474,14 @@ const headlinePoints =
             <line
               class="comparison-line"
               x1={xScale(
-                comparison.firstPoint.value
+                comparison
+                  .firstPoint
+                  .value
               )}
               x2={xScale(
-                comparison.secondPoint.value
+                comparison
+                  .secondPoint
+                  .value
               )}
               y1={getRowY(
                 comparison.rowIndex
@@ -1227,101 +1503,29 @@ const headlinePoints =
         </g>
       {/if}
 
-      <!-- Hover connection -->
-      {#if
-        !isHeadlineView &&
-        hoverLinePath &&
-        hoveredCohort &&
-        selectedCohorts.length === 0
-      }
-        <g
-          class="hover-line-group"
-          in:fade={{
-            duration: 100
-          }}
-          out:fade={{
-            duration: 80
-          }}
-        >
-          <path
-            class="hover-line-outline"
-            d={hoverLinePath}
-          />
 
-          <path
-            class="hover-line"
-            d={hoverLinePath}
-            stroke={getCohortColour(
-              hoveredCohort
-            )}
-            in:draw={{
-              duration: 300
-            }}
-          />
-        </g>
-      {/if}
-
-      <!-- Non-interactive Total benchmark -->
-       {#if !isHeadlineView}
-      <g
-        class="total-markers"
-        aria-hidden="true"
-      >
-        {#each totalPoints as point}
-        <text
-          class="avg-value"
-          x={xScale(point.value)}
-          y={getRowY(point.rowIndex) - 16}
-          text-anchor="middle"
-          >
-          {point.value}<tspan font-size= "7" baseline-shift="super">%</tspan>
-        </text>
-          <line
-            class="total-marker-outline"
-            x1={xScale(point.value)}
-            x2={xScale(point.value)}
-            y1={
-              getRowY(
-                point.rowIndex
-              ) - 12
-            }
-            y2={
-              getRowY(
-                point.rowIndex
-              ) + 12
-            }
-          />
-
-          <line
-            class="total-marker"
-            x1={xScale(point.value)}
-            x2={xScale(point.value)}
-            y1={
-              getRowY(
-                point.rowIndex
-              ) - 11
-            }
-            y2={
-              getRowY(
-                point.rowIndex
-              ) + 11
-            }
-          />
-        {/each}
-      </g>
-      {/if}
-      <!-- Headline editorial points -->
-      {#if isHeadlineView}
-        <g
-          class="headline-points"
-          aria-label="Headline findings"
-        >
+      <!-- Global average opening view -->
+      {#if isAverageView}
+        <g class="global-average-dots">
           {#each
-            headlinePoints
+            globalAverageDots
             as point
-          }
+          }            
+          
+          
+            <rect
+                class="bar"
+                x={margin.left}
+                y={getRowY(
+                  point.rowIndex
+                ) - 2}
+                width={xScale(point.value) - margin.left}
+                height={5}
+                fill="#00634f"
+              />
+
             <circle
-              class="headline-dot"
+              class="average-dot"
               cx={xScale(
                 point.value
               )}
@@ -1329,311 +1533,146 @@ const headlinePoints =
                 point.rowIndex
               )}
               r="9"
-              fill={getHeadlineColour(
-                point.headlineIndex
-              )}
-              stroke="#111111"
+              fill="#009b77"
+              stroke="#00634f"
               stroke-width="2"
             >
-              <title>
-                {point.cohort}:
-                {point.value}%
-              </title>
             </circle>
-          {/each}
-        </g>
-      {/if}
-      {#if isHeadlineView}
-        <g
-          class="headline-value-labels"
-          aria-hidden="true"
-        >
-          {#each
-            headlinePoints
-            as point
-          }
+
+
+
             <text
-              class="headline-value-label"
+              class="average-value-label"
               x={xScale(
                 point.value
-              )}
+              ) + 35}
               y={
-                point.headlineIndex === 0
-                  ? getRowY(
-                      point.rowIndex
-                    ) - 14
-                  : getRowY(
-                      point.rowIndex
-                    ) + 24
+                getRowY(
+                  point.rowIndex
+                ) + 5
               }
               text-anchor="middle"
-              fill={getHeadlineColour(
-                point.headlineIndex
-              )}
             >
               {point.value}<tspan
                 font-size="7"
+                class="percent-sign"
                 baseline-shift="super"
               >%</tspan>
             </text>
           {/each}
         </g>
       {/if}
-    {#if isHeadlineView}
-        <g
-          class="headline-cohort-labels"
-          aria-hidden="true"
-        >
-          {#each
-            headlinePoints
-            as point
-          }
 
-            {#if point.headlineIndex === 1}
-              <text
-                class="headline-cohort-label"
-                x={xScale(
+
+      <!-- Exploratory cohort dots -->
+      {#if !isAverageView}
+        {#key selectedSegment}
+          <g class="cohort-dots">
+            {#each
+              orderedCohortPoints
+              as point
+            }
+              {@const hidden =
+                isDotHidden(
+                  point.cohort
+                )}
+
+              <circle
+                class="dot"
+                class:active-dot={
+                  isHighlighted(
+                    point.cohort
+                  )
+                }
+                class:hidden-dot={
+                  hidden
+                }
+                cx={xScale(
                   point.value
                 )}
-                y={
-                  getRowY(
-                    point.rowIndex
-                  ) + 36
-                }
-                text-anchor="middle"
-                fill={getHeadlineColour(
-                  point.headlineIndex
-                )}
-              >
-                <!-- {point.cohort} -->
-              </text>
-            {/if}
-
-          {/each}
-        </g>
-      {/if}
-
-      {#if isHeadlineView}
-        <g
-          class="headline-annotations"
-          aria-hidden="true"
-        >
-          {#each headlinePoints as point}
-
-            {#if
-              point.headlineIndex === 0 &&
-              point.text
-            }
-
-              {@const dotX =
-                xScale(point.value)}
-
-              {@const dotY =
-                getRowY(
+                cy={getRowY(
                   point.rowIndex
                 )}
-
-              <!--
-                Find the secondary headline point
-                belonging to this same chart row.
-              -->
-              {@const secondaryPoint =
-                headlinePoints.find(
-                  (candidate) =>
-                    candidate.rowIndex ===
-                      point.rowIndex &&
-                    candidate.headlineIndex === 1
+                r={getDotRadius(
+                  point.cohort
                 )}
-
-              {@const annotationWidth =
-                215}
-
-              {@const annotationHeight =
-                42}
-
-              {@const annotationGap =
-                16}
-
-              <!--
-                If the secondary stat is on the right,
-                force the annotation left, and vice versa.
-
-                If there is no secondary point, use
-                whichever side has more room.
-              -->
-              {@const placeOnLeft =
-                secondaryPoint
-                  ? secondaryPoint.value >=
-                    point.value
-                  : dotX >
-                    width / 2}
-
-              {@const rawAnnotationX =
-                placeOnLeft
-                  ? dotX -
-                    annotationWidth -
-                    annotationGap
-                  : dotX +
-                    annotationGap}
-
-              <!--
-                Prevent the callout from escaping
-                the chart bounds.
-              -->
-              {@const annotationX =
-                Math.max(
-                  margin.left,
-                  Math.min(
-                    rawAnnotationX,
-                    width -
-                      margin.right -
-                      annotationWidth
+                fill={getDotFill(
+                  point.cohort
+                )}
+                stroke={getDotStroke(point.cohort)}
+                opacity={getDotOpacity(
+                  point.cohort
+                )}
+                role="button"
+                tabindex={
+                  hidden
+                    ? -1
+                    : 0
+                }
+                aria-hidden={
+                  hidden
+                }
+                aria-pressed={
+                  isSelected(
+                    point.cohort
                   )
-                )}
+                }
+                onmouseenter={(event) =>
+                  showTooltip(
+                    event,
+                    point
+                  )}
+                onmousemove={
+                  updateTooltipPosition
+                }
+                onmouseleave={
+                  hideTooltip
+                }
+                onfocus={(event) => {
+                  const bounds =
+                    event.currentTarget
+                      .getBoundingClientRect();
 
-              {@const annotationY =
-                dotY -
-                annotationHeight / 2}
+                  showTooltip(
+                    {
+                      clientX:
+                        bounds.left +
+                        bounds.width / 2,
 
-              <!-- Connector line -->
-              <!-- <line
-                class="
-                  headline-annotation-connector
-                "
-                x1={
-                  placeOnLeft
-                    ? dotX - 9
-                    : dotX + 9
+                      clientY:
+                        bounds.top +
+                        bounds.height / 2
+                    },
+                    point
+                  );
+                }}
+                onblur={
+                  hideTooltip
                 }
-                x2={
-                  placeOnLeft
-                    ? annotationX +
-                      annotationWidth
-                    : annotationX
-                }
-                y1={dotY}
-                y2={dotY}
-                stroke={getHeadlineColour(
-                  point.headlineIndex
-                )}
-              /> -->
-
-              <foreignObject
-                x={annotationX}
-                y={annotationY}
-                width={
-                  annotationWidth
-                }
-                height={
-                  annotationHeight
-                }
-                class="
-                  headline-annotation-object
-                "
+                onclick={(event) =>
+                  handleDotClick(
+                    event,
+                    point
+                  )}
+                onkeydown={(event) =>
+                  handleDotKeydown(
+                    event,
+                    point
+                  )}
               >
-                <div
-                  xmlns="http://www.w3.org/1999/xhtml"
-                  class="
-                    headline-annotation
-                  "
-                  style:border-color="#626866"
-                >
-                  {point.text}
-                </div>
-              </foreignObject>
-
-            {/if}
-
-          {/each}
-        </g>
-      {/if}
-
-      <!-- Selectable cohort circles -->
-       {#if !isHeadlineView}
-      <g class="cohort-dots">
-        {#each orderedCohortPoints as point}
-          {@const hidden =
-            isDotHidden(point.cohort)}
-
-          <circle
-            class="dot"
-            class:active-dot={
-              isHighlighted(
-                point.cohort
-              )
-            }
-            class:hidden-dot={hidden}
-            cx={xScale(point.value)}
-            cy={getRowY(
-              point.rowIndex
-            )}
-            r={getDotRadius(
-              point.cohort
-            )}
-            fill={getDotFill(
-              point.cohort
-            )}
-            stroke={getDotStroke(
-              point.cohort
-            )}
-            opacity={getDotOpacity(
-              point.cohort
-            )}
-            role="button"
-            tabindex={hidden ? -1 : 0}
-            aria-hidden={hidden}
-            aria-pressed={
-              isSelected(
-                point.cohort
-              )
-            }
-            onmouseenter={(event) =>
-              showTooltip(
-                event,
-                point
-              )}
-            onmousemove={
-              updateTooltipPosition}
-            onmouseleave={hideTooltip}
-            onfocus={(event) => {
-                const bounds =
-                    event.currentTarget.getBoundingClientRect();
-
-              showTooltip({
-                clientX:
-                    bounds.left + bounds.width / 2,
-                clientY:
-                    bounds.top + bounds.height / 2
-              },
-              point
-              );
-              }}
-            onblur={hideTooltip}
-            onclick={(event) => {
-              event.stopPropagation();
-
-              selectCohort(
-                point.cohort
-              );
-            }}
-            onkeydown={(event) =>
-              handleDotKeydown(
-                event,
-                point
-              )}
-          >
-            <title>
-              {point.cohort}:
-              {point.value}<tspan font-size= "7" baseline-shift="super">%</tspan>
-            </title>
-          </circle>
-        {/each}
-      </g>
+              </circle>
+            {/each}
+          </g>
+        {/key}
       {/if}
 
 
       <!-- Selected values -->
-      {#if !isHeadlineView && selectedSeries.length > 0}
+      {#if
+        !isAverageView &&
+        selectedSeries.length >
+          0
+      }
         <g
           class="selected-values"
           in:fade={{
@@ -1643,105 +1682,228 @@ const headlinePoints =
             duration: 80
           }}
         >
-          {#each selectedSeries as series}
-            {#each series.points as point}
+          {#each
+            selectedSeries
+            as series
+          }
+            {#each
+              series.points
+              as point
+            }
               <text
                 class="value-label"
-                x={xScale(point.value)}
-                y={getLabelY(
+                x={getLabelX(
                   point,
                   series.cohort
                 )}
-                text-anchor="middle"
-                fill={getCohortColour(
+                y={getRowY(
+                  point.rowIndex
+                ) + 3}
+                text-anchor={getLabelAnchor(point, series.cohort)}
+                dominant-baseline="middle"
+                fill={getCohortTextColour(
                   series.cohort
                 )}
               >
-                {point.value}<tspan font-size= "7" baseline-shift="super">%</tspan>
+                {point.value}<tspan
+                  font-size="7"
+                  class="percent-sign"
+                  baseline-shift="super"
+                >%</tspan>
               </text>
             {/each}
           {/each}
         </g>
       {/if}
+
     </svg>
   </div>
 
-  <DotPlotTooltipStat3
-    point={hoveredPoint}
-    x={tooltipX}
-    y={tooltipY}
-    colour={
-      hoveredPoint
-        ? getCohortColour(
-            hoveredPoint.cohort
-          )
-        : '#05c690'
-    }
-  />
+
+  {#if !isAverageView}
+    <DotPlotTooltipStat3
+      point={hoveredPoint}
+      x={tooltipX}
+      y={tooltipY}
+      colour={
+        hoveredPoint
+          ? getCohortColour(
+              hoveredPoint.cohort
+            )
+          : highlightColour
+      }
+    />
+  {/if}
+
 </section>
+
 
 <style>
   .dot-plot-stat-1 {
+    --kf-green: #009b77;
+    --kf-green-dark: #00634f;
+    --kf-eyebrow: #053328;
+    --kf-blue: #007da4;
+    --kf-black: #000000;
+    --kf-grey: #8f9995;
+    --kf-light-grey: #e3e6e5;
+
     width: 100%;
-    max-width: 900px;
+    max-width: 940px;
     margin-inline: auto;
+
     overflow: visible;
 
-    color: #171a19;
+    color: var(--kf-black);
 
+    font-family:
+      'Gotham',
+      Arial,
+      sans-serif;
+  }
+
+  /* Main page heading */
+  .page-title,
+  h1 {
+    margin: 0;
+
+    color: var(--kf-green);
+
+    font-size: 64px;
+    font-weight: 700;
+    line-height: 1.05;
+  }
+
+  /* Chart and section headings */
+  .chart-heading h2,
+  h2 {
+    margin: 0;
+
+    color: var(--kf-green);
+
+    font-size: 32px;
+    font-weight: 500;
+    line-height: 1.15;
+
+    text-transform: uppercase;
+  }
+
+  /* Pull quotes */
+  .quote {
+    margin: 0;
+
+    color: var(--kf-green);
+
+    font-size: 24px;
+    font-weight: 500;
+    line-height: 1.35;
+  }
+
+  /* Standard body copy */
+  .body-copy {
+    color: var(--kf-black);
+
+    font-size: 18px;
+    font-weight: 400;
+    line-height: 1.5;
+  }
+
+  /* Small uppercase labels */
+
+  @media (max-width: 680px) {
+    .chart-heading h2 {
+      font-size: 28px;
+    }
+
+    .chart-explanation {
+      font-size: 16px;
+    }
+
+    .control-label,
+    .axis-title {
+      font-size: 13px;
+    }
+
+    .axis-tick-label {
+      font-size: 12px;
+    }
+
+    .measure-label {
+      font-size: 16px;
+      line-height: 1.35;
+    }
+
+    .value-label,
+    .average-value-label {
+      font-size: 18px;
+    }
+
+    .percent-sign {
+      font-size: 10px;
+    }
+  }
+
+  h2 {
+    font-size: 32px;
+  }
+
+  p {
     font-family:
       'gotham',
       Arial,
       sans-serif;
+    font-size: 18px;
   }
+
 
   .chart-heading {
     margin-bottom: 1rem;
   }
 
-  .chart-heading h2 {
-    margin: 0;
+  .chart-explanation {
+    max-width: 940px;
 
-    font-size:
-      clamp(
-        1.25rem,
-        3vw,
-        1.75rem
-      );
+    margin:
+      0.75rem
+      0
+      0;
 
-    line-height: 1.15;
-    text-transform: uppercase;
+    color: var(--kf-black);
+
+    font-size: 18px;
+    font-weight: 400;
+    line-height: 1.55;
   }
 
-  .chart-heading p {
-    max-width: 760px;
-    margin: 0.6rem 0 0;
 
-    color: #626866;
-    font-size: 0.85rem;
-    line-height: 1.5;
-  }
+  /* Controls */
 
   .sticky-controls {
     position: sticky;
     top: 12px;
     z-index: 20;
 
-    display: grid;
-    gap: 0.9rem;
-
     margin-bottom: 1.25rem;
     padding: 1rem;
 
-    border: 1px solid #dfe3e1;
+    border:
+      1px solid
+      #dfe3e1;
+
     border-radius: 0.9rem;
 
     background:
-      rgb(255 255 255 / 96%);
+      rgb(
+        255 255 255 /
+        96%
+      );
 
     box-shadow:
       0 7px 24px
-      rgb(0 0 0 / 8%);
+      rgb(
+        0 0 0 /
+        8%
+      );
 
     backdrop-filter:
       blur(8px);
@@ -1756,6 +1918,7 @@ const headlinePoints =
       minmax(0, 1fr);
 
     gap: 1rem;
+
     width: 100%;
   }
 
@@ -1765,34 +1928,54 @@ const headlinePoints =
     min-width: 0;
   }
 
-  .control-label {
-    margin: 0 0 0.55rem;
+  .control-label, .axis-title {
+    margin:
+      0
+      0
+      0.55rem;
 
-    color: #626866;
+    color: #053328;
+
     font-size: 0.68rem;
     font-weight: 800;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
+
+    letter-spacing:
+      0.06em;
+
+    text-transform:
+      uppercase;
   }
+
+
+  /* View pills */
 
   .segment-selector {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.35rem;
+    gap: 0.75rem;
     width: 100%;
   }
 
   .segment-selector button {
-    border: 1px solid #d5dad8;
-    border-radius: 999px;
-    padding: 0.42rem 0.68rem;
+    min-height: 48px;
 
-    background: #f3f5f4;
-    color: #525856;
+    border:
+      1.5px solid
+      #00634f;
+
+    border-radius: 2px;
+
+    padding:
+      0.7rem
+      1.4rem;
+
+    background: #ffffff;
+    color: #00634f;
 
     font: inherit;
-    font-size: 0.78rem;
-    font-weight: 700;
+    font-size: 16px;
+    font-weight: 500;
+
     cursor: pointer;
 
     transition:
@@ -1803,140 +1986,86 @@ const headlinePoints =
 
   .segment-selector button:hover,
   .segment-selector button:focus-visible {
-    border-color: #8e9995;
+    background: #f2f8f6;
     outline: none;
   }
 
   .segment-selector button.active {
-    border-color: #123f37;
-    background: #123f37;
-    color: white;
+    border-color: #00634f;
+
+    background: #00634f;
+    color: #ffffff;
   }
 
-  button.headline-tab {
-    border-color: #8e9995;
-    background: #ffffff;
-    color: #000000;
-    font-weight: 800;
+
+  /* Cohort controls */
+
+  .cohort-control-heading {
+    display: flex;
+    gap: 0.75rem;
+
+    align-items: center;
+    justify-content:
+      space-between;
+
+    margin-bottom: 0.55rem;
   }
 
-  .headline-tab:hover,
-  .headline-tab:focus-visible {
-    border-color: #05c690;
+  .cohort-control-heading {
+    margin: 0;
   }
 
-  button.headline-tab.active {
-    border-color: #123f37;
-    background: #123f37;
-    color: white;
-  }
+  .reset-comparison-button {
+    flex: 0 0 auto;
 
-  .clear-button {
-    justify-self: start;
+    border:
+      1px solid
+      #8e9995;
 
-    border: 1px solid #b9c0bd;
     border-radius: 999px;
-    padding: 0.48rem 0.78rem;
+
+    padding:
+      0.4rem
+      0.7rem;
 
     background: white;
-    color: #252a28;
+    color: #343936;
 
     font: inherit;
-    font-size: 0.76rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+
     cursor: pointer;
+
+    transition:
+      border-color 150ms ease,
+      background 150ms ease,
+      color 150ms ease,
+      transform 150ms ease;
   }
 
-  .chart-explanation {
-    max-width: 72ch;
-    margin: 0;
-    color: #4b504d;
-    font-size: 0.86rem;
-    line-height: 1.7;
-    }
+  .reset-comparison-button:hover,
+  .reset-comparison-button:focus-visible {
+    border-color: #123f37;
 
-    .inline-key {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.3rem;
+    background: #123f37;
+    color: white;
 
-    border-radius: 999px;
-    padding: 0.08rem 0.42rem;
+    outline: none;
+  }
 
-    /* font-size: 0.78rem;
-    font-weight: 700; */
+  .reset-comparison-button:active {
+    transform:
+      scale(0.96);
+  }
 
-    vertical-align: middle;
-    }
 
-    .average-marker-icon {
-      display: inline-block;
-      width: 2px;
-      height: 14px;
-      border-radius: 999px;
-      background: #111;
-      flex: 0 0 auto;
-    }
-
-    .inline-key img {
-    display: block;
-    width: 11px;
-    height: 11px;
-    flex: 0 0 auto;
-    }
-
-    .cohort-key {
-    background: #f0f2f1;
-    color: #343a37;
-    }
-
-    .range-key {
-    background: #d7d9d8;
-    color: #343a37;
-    }
-
-    .highlight-key {
-    background:
-        color-mix(
-        in srgb,
-        var(--highlight-colour) 14%,
-        white
-        );
-
-    color: #ffffff;
-    }
-
-    .compare-key {
-    background:
-        color-mix(
-        in srgb,
-        var(--compare-colour) 14%,
-        white
-        );
-
-    color: #ffffff;
-    }
-
-    .average-key {
-    background: #f0f2f1;
-    color: #222624;
-    }
-
-    .average-key img {
-    width: 3px;
-    height: 14px;
-    object-fit: fill;
-    }
-
-    .colour-dot {
-    width: 9px;
-    height: 9px;
-    flex: 0 0 auto;
-    border-radius: 50%;
-    }
+  /* Chart */
 
   .chart-wrapper {
     width: 100%;
     min-width: 0;
+
     overflow-x: auto;
 
     overscroll-behavior-inline:
@@ -1947,20 +2076,18 @@ const headlinePoints =
     display: block;
 
     width: 100%;
-    min-width: 760px;
     height: auto;
 
     overflow: visible;
+
     background: white;
   }
 
-  .axis-title {
-    fill: #626866;
 
-    font-size: 10px;
-    font-weight: 800;
-    letter-spacing: 0.055em;
-    text-transform: uppercase;
+  /* Axis */
+
+  .axis-title {
+    fill: #053328;
   }
 
   .axis-baseline,
@@ -1970,10 +2097,15 @@ const headlinePoints =
   }
 
   .axis-tick-label {
-    fill: #626866;
+    fill: #000000;
 
-    font-size: 10px;
-    font-weight: 700;
+    font-family:
+      'Gotham',
+      Arial,
+      sans-serif;
+
+    font-size: 14px;
+    font-weight: 400;
   }
 
   .axis-grid-line {
@@ -1984,6 +2116,9 @@ const headlinePoints =
     pointer-events: none;
   }
 
+
+  /* Rows */
+
   .measure-label {
     display: flex;
     align-items: flex-end;
@@ -1991,13 +2126,16 @@ const headlinePoints =
     width: 100%;
     height: 100%;
 
-    color: #202422;
+    color: #000000;
 
-    font-size: 12px;
-    font-weight: 700;
-    line-height: 1.25;
+    font-family:
+      'Gotham',
+      Arial,
+      sans-serif;
 
-    text-transform: none;
+    font-size: 18px;
+    font-weight: 400;
+    line-height: 1.35;
   }
 
   .row-guide {
@@ -2005,48 +2143,33 @@ const headlinePoints =
     stroke-width: 1;
   }
 
-  .range-line {
-    stroke: #d7d9d8;
-    stroke-width: 14;
-    stroke-linecap: round;
-  }
+
+  /* Comparison */
 
   .comparison-line-outline {
     stroke: white;
+
     stroke-width: 19;
+
     stroke-linecap: round;
   }
 
   .comparison-line {
     stroke-width: 14;
+
     stroke-linecap: round;
 
     pointer-events: none;
   }
 
-  .hover-line,
-  .hover-line-outline {
-    fill: none;
-    stroke-linecap: round;
-    stroke-linejoin: round;
 
-    pointer-events: none;
-  }
+  /* Dots */
 
-  .hover-line-outline {
-    stroke: white;
-    stroke-width: 7;
-  }
-
-  .hover-line {
-    stroke-width: 3;
-  }
-
-  .dot {
+  .dot,
+  .average-dot {
     box-sizing: border-box;
 
-    cursor: pointer;
-    stroke-width: 1.4;
+    stroke-width: 2;
 
     transition:
       r 180ms ease,
@@ -2056,16 +2179,21 @@ const headlinePoints =
       stroke-width 180ms ease;
   }
 
+  .dot {
+    cursor: pointer;
+  }
+
   .dot:hover,
   .dot:focus-visible,
-  .active-dot {
-    stroke-width: 2;
+  .dot.active-dot {
+    stroke-width: 2.5;
+
     outline: none;
 
     filter:
       drop-shadow(
         0 2px 3px
-        rgb(0 0 0 / 20%)
+        rgb(0 0 0 / 12%)
       );
   }
 
@@ -2073,328 +2201,112 @@ const headlinePoints =
     pointer-events: none;
   }
 
-  .total-markers {
-    pointer-events: none;
-  }
 
-  .total-marker-outline {
-    stroke: white;
-    stroke-width: 7;
-    stroke-linecap: round;
-  }
+  /* Labels */
 
-  .total-marker {
-    stroke: #111111;
-    stroke-width: 3;
-    stroke-linecap: round;
-  }
+  .value-label,
+  .average-value-label {
+    font-family:
+      'Gotham',
+      Arial,
+      sans-serif;
 
-  .avg-value {
-    font-size: 10px;
-    font-weight: 500;
-  }
-
-  .value-label {
-    font-size: 10px;
-    font-weight: 800;
+    font-size: 20px;
+    font-weight: 400;
 
     pointer-events: none;
 
     paint-order: stroke;
-    stroke: white;
-    stroke-width: 3px;
+    stroke: #ffffff;
+    stroke-width: 4px;
     stroke-linejoin: round;
   }
 
-  .comparison-selectors {
-  display: grid;
-  grid-template-columns:
-    repeat(
-      2,
-      minmax(0, 1fr)
-    );
-  gap: 0.75rem;
-}
-
-.select-field {
-  display: grid;
-  gap: 0.35rem;
-  min-width: 0;
-}
-
-.select-label-1 {
-  color: #ffffff;
-  font-weight: 700;
-  font-size: 0.68rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  background: #05c690;
-  width: fit-content;
-
-}
-.select-label-2 {
-  color: #ffffff;
-  font-weight: 700;
-  font-size: 0.68rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  background: #007da4;
-  width: fit-content;
-}
-
-.select-field select {
-  width: 100%;
-  min-width: 0;
-
-  border: 1px solid #cbd1ce;
-  border-radius: 0.65rem;
-  padding: 0.65rem 2.25rem 0.65rem
-    0.75rem;
-
-  background-color: white;
-  color: #202422;
-
-  font: inherit;
-  font-size: 0.82rem;
-  font-weight: 600;
-
-  cursor: pointer;
-}
-
-.select-field select:hover {
-  border-color: #89938f;
-}
-
-.select-field select:focus-visible {
-  border-color: #123f37;
-  outline:
-    2px solid
-    rgb(18 63 55 / 20%);
-  outline-offset: 2px;
-}
-
-.select-field select:disabled {
-  background: #f2f4f3;
-  color: #929995;
-  cursor: not-allowed;
-}
-
-.disabled-field .select-label {
-  color: #929995;
-}
-
-.selection-summary {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-
-  margin-top: 0.7rem;
-}
-
-.selection-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-
-  border-radius: 999px;
-  padding: 0.3rem 0.55rem;
-
-  background: #f2f4f3;
-  color: #343936;
-
-  font-size: 0.74rem;
-  font-weight: 700;
-}
-
-.selection-dot {
-  width: 9px;
-  height: 9px;
-  flex: 0 0 auto;
-
-  border-radius: 50%;
-}
-
-.select-input-row {
-  display: grid;
-  grid-template-columns:
-    minmax(0, 1fr)
-    34px;
-  gap: 0.4rem;
-  align-items: center;
-
-  width: 100%;
-  min-width: 0;
-}
-
-.reset-selection {
-  display: grid;
-  place-items: center;
-
-  width: 34px;
-  height: 34px;
-
-  box-sizing: border-box;
-
-  border: 1px solid #cbd1ce;
-  border-radius: 50%;
-
-  background: white;
-
-  font: inherit;
-  font-size: 1.25rem;
-  font-weight: 400;
-  line-height: 1;
-
-  cursor: pointer;
-
-  transition:
-    background 150ms ease,
-    color 150ms ease,
-    border-color 150ms ease,
-    opacity 150ms ease,
-    transform 150ms ease;
-}
-
-.reset-selection span {
-  /*
-   * Optical correction for × glyph.
-   */
-  transform: translateY(-1px);
-}
-
-/* green highlight reset */
-.reset-highlight {
-  border-color: #05c690;
-  color: #05c690;
-}
-
-.reset-highlight:hover:not(:disabled) {
-  background: #05c690;
-  color: white;
-}
-
-/* blue comparison reset */
-.reset-compare {
-  border-color: #007da4;
-  color: #007da4;
-}
-
-.reset-compare:hover:not(:disabled) {
-  background: #007da4;
-  color: white;
-}
-
-.reset-selection:focus-visible {
-  outline: 2px solid currentColor;
-  outline-offset: 2px;
-}
-
-.reset-selection:active:not(:disabled) {
-  transform: scale(0.92);
-}
-
-.reset-selection:disabled {
-  border-color: #dfe3e1;
-  background: #f3f5f4;
-  color: #afb6b3;
-
-  opacity: 0.55;
-
-  cursor: not-allowed;
-}
-
-/* ---------------------------------
-   Headline view
-   --------------------------------- */
-
-.headline-points,
-.headline-value-labels,
-.headline-cohort-labels,
-.headline-annotations {
-  pointer-events: none;
-}
-
-.headline-dot {
-  filter:
-    drop-shadow(
-      0 2px 3px
-      rgb(0 0 0 / 18%)
-    );
-}
-
-.headline-value-label {
-  font-size: 10px;
-  font-weight: 800;
-
-  paint-order: stroke;
-  stroke: white;
-  stroke-width: 3px;
-  stroke-linejoin: round;
-}
-
-.headline-cohort-label {
-  font-size: 7px;
-  font-weight: 700;
-
-  paint-order: stroke;
-  stroke: white;
-  stroke-width: 2px;
-  stroke-linejoin: round;
-}
-
-.headline-annotation-connector {
-  stroke-width: 2;
-  stroke-linecap: round;
-}
-
-.headline-annotation-object {
-  overflow: visible;
-}
-
-.headline-annotation {
-  display: flex;
-  align-items: center;
-
-  width: 100%;
-  height: 100%;
-
-  box-sizing: border-box;
-
-  padding:
-    0.35rem
-    0.55rem;
-
-  border: 1px solid;
-  border-radius: 8px;
-
-  background:
-    rgb(255 255 255 / 96%);
-
-  color: #252a28;
-
-  font-size: 9px;
-  font-weight: 600;
-  line-height: 1.25;
-
-  box-shadow:
-    0 3px 8px
-    rgb(0 0 0 / 10%);
-}
-
-@media (max-width: 680px) {
-  .comparison-selectors {
-    grid-template-columns:
-      minmax(0, 1fr);
+  .percent-sign {
+    font-size: 11px;
+    font-weight: 400;
   }
-}
 
-  @media (max-width: 680px) {
+
+  /* Mobile */
+
+  @media (
+    min-width: 681px
+  ) {
+    svg {
+      min-width: 760px;
+    }
+  }
+
+  @media (
+    max-width: 680px
+  ) {
+    .dot-plot-stat-1 {
+      width: 100%;
+    }
+
     .sticky-controls {
       position: static;
 
+      margin-bottom: 1rem;
+      padding: 0.8rem;
+
+      border-radius: 0.75rem;
+
       backdrop-filter: none;
+
       -webkit-backdrop-filter:
         none;
+    }
+
+    .controls {
+      gap: 0.85rem;
+    }
+
+    .segment-selector {
+      flex-wrap: nowrap;
+
+      overflow-x: auto;
+      overflow-y: hidden;
+
+      padding-bottom: 0.25rem;
+
+      scrollbar-width: none;
+
+      -webkit-overflow-scrolling:
+        touch;
+    }
+
+    .segment-selector::-webkit-scrollbar {
+      display: none;
+    }
+
+    .segment-selector button {
+      flex: 0 0 auto;
+
+      white-space: nowrap;
+    }
+
+    .cohort-control-heading {
+      align-items: flex-start;
+    }
+
+    .reset-comparison-button {
+      font-size: 0.68rem;
+    }
+
+    .chart-wrapper {
+      overflow-x: visible;
+    }
+
+    svg {
+      width: 100%;
+      min-width: 0;
+    }
+
+    .measure-label {
+      font-size: 11px;
+      line-height: 1.3;
     }
   }
 </style>

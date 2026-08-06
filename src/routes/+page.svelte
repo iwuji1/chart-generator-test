@@ -1,6 +1,4 @@
 <script>
-  import Stat1 from '$lib/components/charts/stat-1/InteractiveDotPlotStat1.svelte';
-  import Stat1_v2 from '$lib/components/charts/stat-1-v2/InteractiveDotPlotStat1_v2.svelte'
   import Stat1_v3 from '$lib/components/charts/stat-1-v3/InteractiveDotPlotStat1_v3.svelte'
   import Stat2 from '$lib/components/charts/stat-2/InteractiveDotPlotStat2.svelte';
   import Stat3 from '$lib/components/charts/stat-3/InteractiveDotPlotStat3.svelte';
@@ -12,7 +10,7 @@
   const charts = [
     {
       title: 'Stat 1',
-      chart: Stat1
+      chart: Stat1_v3
     },
     {
       title: 'Stat 2',
@@ -90,12 +88,7 @@
   >
     <activeChart.chart />
   </section>
-  <section class="wide-chart">
-    <Stat1_v2 />
-  </section>
-  <section class="wide-chart">
-    <Stat1_v3 />
-  </section>
+
 </main>
 
 <style>
