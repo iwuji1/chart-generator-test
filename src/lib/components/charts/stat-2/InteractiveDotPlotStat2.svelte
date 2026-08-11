@@ -1753,18 +1753,6 @@
       sans-serif;
   }
 
-  /* Main page heading */
-  .page-title,
-  h1 {
-    margin: 0;
-
-    color: var(--kf-green);
-
-    font-size: 64px;
-    font-weight: 700;
-    line-height: 1.05;
-  }
-
   /* Chart and section headings */
   .chart-heading h2,
   h2 {

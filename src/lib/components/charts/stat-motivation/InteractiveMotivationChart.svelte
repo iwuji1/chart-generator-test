@@ -359,16 +359,8 @@
 >
   <div class="chart-heading">
     <h2>
-      Employee motivation declining in 2026
+      The (Employee) Motivation Dip No One Saw Coming
     </h2>
-
-    <p>
-      This chart shows the extent of agreement
-      to selected statements which collectively
-      reflect each person’s level of motivation.
-      Use the drop-down list to explore different
-      cohorts or browse through them in sequence.
-    </p>
   </div>
 
   <div class="controls">
