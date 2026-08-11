@@ -1,20 +1,21 @@
 <script>
-  import {
-    formatSubsegmentLabel
-  } from './stat1Data.js';
-
   let {
     point = null,
     x = 0,
     y = 0,
-    colour = '#009b77'
+    colour = '#76bf3d'
   } = $props();
 
-  const tooltipWidth = 210;
-  const tooltipHeight = 48;
+  const tooltipWidth = 300;
+  const estimatedTooltipHeight = 180;
   const offset = 16;
   const viewportPadding = 12;
 
+  /*
+   * Move the tooltip into document.body so that
+   * transformed chart ancestors cannot affect its
+   * fixed positioning.
+   */
   function portal(node) {
     document.body.appendChild(node);
 
@@ -26,57 +27,47 @@
   }
 
   const tooltipX = $derived.by(() => {
-    if (
-      typeof window ===
-      'undefined'
-    ) {
+    if (typeof window === 'undefined') {
       return x + offset;
     }
 
-    const preferred =
-      x + offset;
-
-    if (
-      preferred +
+    const fitsOnRight =
+      x +
+        offset +
         tooltipWidth +
         viewportPadding <=
-      window.innerWidth
-    ) {
-      return preferred;
+      window.innerWidth;
+
+    if (fitsOnRight) {
+      return x + offset;
     }
 
     return Math.max(
       viewportPadding,
-      x -
-        tooltipWidth -
-        offset
+      x - tooltipWidth - offset
     );
   });
 
   const tooltipY = $derived.by(() => {
-    if (
-      typeof window ===
-      'undefined'
-    ) {
+    if (typeof window === 'undefined') {
       return y + offset;
     }
 
-    const preferred =
-      y + offset;
-
-    if (
-      preferred +
-        tooltipHeight +
+    const fitsBelow =
+      y +
+        offset +
+        estimatedTooltipHeight +
         viewportPadding <=
-      window.innerHeight
-    ) {
-      return preferred;
+      window.innerHeight;
+
+    if (fitsBelow) {
+      return y + offset;
     }
 
     return Math.max(
       viewportPadding,
       y -
-        tooltipHeight -
+        estimatedTooltipHeight -
         offset
     );
   });
@@ -88,12 +79,32 @@
     class="tooltip"
     style:left={`${tooltipX}px`}
     style:top={`${tooltipY}px`}
-    style:border-color={colour}
     role="tooltip"
   >
-    {formatSubsegmentLabel(
-      point.cohort
-    )}
+    <div class="tooltip-heading">
+      <span
+        class="tooltip-dot"
+        style:background={colour}
+      ></span>
+
+      <span class="cohort">
+        {point.cohort}
+      </span>
+    </div>
+
+    <p class="measure">
+      {point.measure}
+    </p>
+
+    <div class="value-row">
+      <span class="value">
+        {point.value}<sup>%</sup>
+      </span>
+
+      <span class="value-label">
+        Agree
+      </span>
+    </div>
   </aside>
 {/if}
 
@@ -101,44 +112,75 @@
   .tooltip {
     position: fixed;
     z-index: 9999;
+    font-family: Gotham, sans-serif;
 
+    width: 300px;
+    max-width: calc(100vw - 24px);
     box-sizing: border-box;
-    max-width:
-      calc(100vw - 24px);
+    margin: 0;
+    padding: 1rem;
 
-    border:
-      1.5px solid
-      #009b77;
-    border-radius: 999px;
+    border: 1px solid #d8dcda;
+    border-radius: 12px;
 
-    padding:
-      0.5rem
-      0.8rem;
-
-    background: #ffffff;
-    color: #053328;
-
-    font-family:
-      'Gotham',
-      Arial,
-      sans-serif;
-
-    font-size: 14px;
-    font-weight: 400;
-    line-height: 1.2;
-
-    white-space: nowrap;
+    background: white;
+    color: #171a19;
 
     box-shadow:
-      0 5px 16px
-      rgb(0 0 0 / 10%);
+      0 10px 30px
+      rgb(0 0 0 / 12%);
 
     pointer-events: none;
   }
 
-  @media (max-width: 680px) {
-    .tooltip {
-      font-size: 13px;
-    }
+  .tooltip-heading {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+  }
+
+  .tooltip-dot {
+    width: 10px;
+    height: 10px;
+    flex: 0 0 auto;
+    border-radius: 50%;
+  }
+
+  .cohort {
+    font-size: 0.82rem;
+    font-weight: 700;
+    line-height: 1.25;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .measure {
+    margin: 0.85rem 0 1rem;
+    font-size: 0.95rem;
+    line-height: 1.4;
+  }
+
+  .value-row {
+    display: flex;
+    align-items: baseline;
+    gap: 0.45rem;
+  }
+
+  .value {
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .value-label {
+    color: #6b716e;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  sup {
+    font-weight: 300;
+    font-size: 1rem;
   }
 </style>

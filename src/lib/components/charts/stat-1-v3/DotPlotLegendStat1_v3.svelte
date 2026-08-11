@@ -1,11 +1,12 @@
 <script>
-  import {
-    formatSubsegmentLabel
-  } from './stat1Data.js';
+
+  import { onMount } from 'svelte'
+  import { gsap } from 'gsap/dist/gsap'
+  import { ScrollTrigger } from 'gsap/dist/ScrollTrigger';
 
   let {
-    cohorts = [],
-    getCohortTextColour,
+    cohorts,
+    getCohortColour,
     selectedCohorts = [],
     hoveredCohort = null,
     onSelect,
@@ -13,129 +14,136 @@
     onClearPreview
   } = $props();
 
+  let legendElement;
 
-  function isSelected(
-    cohort
-  ) {
-    return selectedCohorts.includes(
-      cohort
-    );
+  function isSelected(cohort) {
+    return selectedCohorts.includes(cohort);
   }
 
-
-  function isActive(
-    cohort
-  ) {
+  function isActive(cohort) {
     return (
       isSelected(cohort) ||
       hoveredCohort === cohort
     );
   }
 
-
-  function isMuted(
-    cohort
-  ) {
+  function isMuted(cohort) {
     return (
       selectedCohorts.length > 0 &&
-      !isSelected(cohort) &&
-      hoveredCohort !== cohort
+      !isSelected(cohort)
     );
   }
 
-
-  function getSelectionIndex(
-    cohort
-  ) {
-    return selectedCohorts.indexOf(
-      cohort
-    );
-  }
-
-
-  function getLegendDotFill(
-    cohort
-  ) {
-    const selectedIndex =
-      getSelectionIndex(
-        cohort
-      );
-
-    /*
-     * Primary green selection.
-     */
-    if (
-      selectedIndex === 0
-    ) {
-      return '#009b77';
-    }
-
-    /*
-     * Blue comparison remains white.
-     */
-    if (
-      selectedIndex === 1
-    ) {
-      return '#ffffff';
-    }
-
-    /*
-     * Hover preview remains white.
-     */
-    return '#ffffff';
-  }
-
-
-  function getLegendDotStroke(
-    cohort
-  ) {
-    const selectedIndex =
-      getSelectionIndex(
-        cohort
-      );
-
-    if (
-      selectedIndex === 0
-    ) {
-      return '#00634f';
-    }
-
-    if (
-      selectedIndex === 1
-    ) {
-      return '#007da4';
-    }
-
-    if (
-      hoveredCohort === cohort
-    ) {
-      return '#00634f';
-    }
-
-    return '#8f9995';
-  }
-
-
-  function handleKeydown(
-    event,
-    cohort
-  ) {
+  function handleKeydown(event, cohort) {
     if (
       event.key === 'Enter' ||
       event.key === ' '
     ) {
       event.preventDefault();
-
       onSelect(cohort);
     }
   }
-</script>
 
+  onMount(() => {
+    gsap.registerPlugin(
+      ScrollTrigger
+    );
+
+    /*
+     * Respect the user's operating-system motion
+     * preference and skip decorative movement.
+     */
+    const reduceMotion =
+      window.matchMedia(
+        '(prefers-reduced-motion: reduce)'
+      ).matches;
+
+    if (
+      reduceMotion ||
+      !legendElement
+    ) {
+      return;
+    }
+
+    const context = gsap.context(() => {
+      const pills =
+        legendElement.querySelectorAll(
+          '.legend-pill'
+        );
+
+      function pulsePills() {
+        /*
+         * Stop an unfinished pulse before starting
+         * again when the controls re-enter view.
+         */
+        gsap.killTweensOf(pills);
+
+        gsap.fromTo(
+          pills,
+          {
+            scale: 1,
+            boxShadow:
+              '0 0 0 0 rgba(5, 198, 144, 0)'
+          },
+          {
+            scale: 1.06,
+            boxShadow:
+              '0 0 0 5px rgba(5, 198, 144, 0.16)',
+
+            duration: 1.034,
+            ease: 'sine.inOut',
+
+            /*
+             * One forward and one reverse movement
+             * form one pulse. repeat: 5 therefore
+             * produces three complete pulses.
+             */
+            repeat: 5,
+            yoyo: true,
+
+            stagger: 0,
+
+            onComplete: () => {
+              gsap.set(pills, {
+                clearProps:
+                  'transform,boxShadow'
+              });
+            }
+          }
+        );
+      }
+
+      ScrollTrigger.create({
+        trigger: legendElement,
+
+        /*
+         * Start when the legend enters the lower
+         * part of the viewport.
+         */
+        start: 'top 82%',
+
+        /*
+         * The trigger remains active until the
+         * legend has passed the upper viewport area.
+         */
+        end: 'bottom 18%',
+
+        onEnter: pulsePills,
+        onEnterBack: pulsePills
+      });
+    }, legendElement);
+
+    return () => {
+      context.revert();
+    };
+  });
+</script>
 
 <div
   class="legend"
   role="group"
-  aria-label="Highlight one cohort and optionally compare it with another"
+  aria-label="Select up to two cohorts"
+  bind:this={legendElement}
 >
   {#each cohorts as cohort}
     <button
@@ -144,46 +152,31 @@
       class:active={isActive(cohort)}
       class:selected={isSelected(cohort)}
       class:muted={isMuted(cohort)}
-      style={`--pill-colour: ${getCohortTextColour(cohort)}`}
+      style={`--cohort-colour: ${getCohortColour(cohort)}`}
       aria-pressed={isSelected(cohort)}
       onmouseenter={() => onPreview(cohort)}
-      onmouseleave={ onClearPreview}
-      onfocus={() =>
-        onPreview(cohort)}
-      onblur={
-        onClearPreview
-      }
-      onclick={() =>
-        onSelect(cohort)}
+      onmouseleave={onClearPreview}
+      onfocus={() => onPreview(cohort)}
+      onblur={onClearPreview}
+      onclick={() => onSelect(cohort)}
       onkeydown={(event) =>
-        handleKeydown(
-          event,
-          cohort
-        )}
+        handleKeydown(event, cohort)}
     >
-      <span
-        class="legend-dot"
-        style:background={
-          getLegendDotFill(
-            cohort
-          )
-        }
-        style:border-color={
-          getLegendDotStroke(
-            cohort
-          )
-        }
-      ></span>
+      <span class="legend-dot"></span>
 
-      <span>
-        {formatSubsegmentLabel(
-          cohort
-        )}
-      </span>
+      <span>{cohort}</span>
+
+      {#if isSelected(cohort)}
+        <span
+          class="selected-indicator"
+          aria-hidden="true"
+        >
+          ✓
+        </span>
+      {/if}
     </button>
   {/each}
 </div>
-
 
 <style>
   .legend {
@@ -203,36 +196,29 @@
     padding: 0.45rem 0.68rem;
 
     background: transparent;
-    color:#272c2a;
+    color: #272c2a;
 
     font: inherit;
-    font-size: 14px;
-    font-weight: 400;
-
+    font-size: 0.76rem;
     cursor: pointer;
 
     transition:
       opacity 150ms ease,
       background 150ms ease,
-      border-color 150ms ease,
-      color 150ms ease;
+      border-color 150ms ease;
   }
 
   button:hover,
   button:focus-visible,
   button.active {
-    background:#f2f4f3;
+    border-color: #cad0cd;
+    background: #f2f4f3;
     outline: none;
   }
 
   button.selected {
-    border-color:
-      var(--pill-colour);
-
-    color:
-      var(--pill-colour);
-
-    font-weight: 500;
+    border-color: var(--cohort-colour);
+    font-weight: 700;
   }
 
   button.muted {
@@ -240,13 +226,12 @@
   }
 
   .legend-dot {
-    width: 0.85rem;
-    height: 0.85rem;
+    width: 0.68rem;
+    height: 0.68rem;
     flex: 0 0 auto;
 
     box-sizing: border-box;
-
-    border: 2px solid #8f9995;
+    border: 1.5px solid #8f9895;
     border-radius: 50%;
 
     background: white;
@@ -257,16 +242,23 @@
       border-color 150ms ease;
   }
 
+  .legend-pill {
+    transform-origin: center;
+    will-change: 
+      transform, 
+      box-shadow;
+  }
+
   button.active .legend-dot,
   button.selected .legend-dot {
+    border-color: var(--cohort-colour);
+    background: var(--cohort-colour);
     transform: scale(1.2);
   }
 
-  @media (
-    max-width: 680px
-  ) {
-    button {
-      font-size: 13px;
-    }
+  .selected-indicator {
+    color: var(--cohort-colour);
+    font-size: 0.7rem;
+    font-weight: 900;
   }
 </style>
