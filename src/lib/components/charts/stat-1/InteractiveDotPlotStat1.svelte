@@ -7,10 +7,10 @@
   } from 'svelte/transition';
 
   import DotPlotTooltipStat1V3
-    from './DotPlotTooltipStat1_v3.svelte';
+    from './DotPlotTooltipStat1.svelte';
 
   import DotPlotLegendStat1V3
-    from './DotPlotLegendStat1_v3.svelte';
+    from './DotPlotLegendStat1.svelte';
 
   import {
     SourceData,
