@@ -1141,18 +1141,9 @@
 
   <div class="chart-heading">
     <h2>
-      The AI Productivity Problem
+      Trapped Between AI's Potential and Its Burden
     </h2>
 
-    <p class="chart-explanation">
-      This chart shows the levels of agreement with
-      selected statements. The initial view shows the
-      global average, you can then filter to explore
-      different segment groups. Clicking on a cohort
-      will highlight its related values, you can then
-      click to choose to compare responses with another
-      cohort.
-    </p>
   </div>
 
 
@@ -1788,35 +1779,12 @@
     text-transform: uppercase;
   }
 
-  /* Pull quotes */
-  .quote {
-    margin: 0;
-
-    color: var(--kf-green);
-
-    font-size: 24px;
-    font-weight: 500;
-    line-height: 1.35;
-  }
-
-  /* Standard body copy */
-  .body-copy {
-    color: var(--kf-black);
-
-    font-size: 18px;
-    font-weight: 400;
-    line-height: 1.5;
-  }
 
   /* Small uppercase labels */
 
   @media (max-width: 680px) {
     .chart-heading h2 {
       font-size: 28px;
-    }
-
-    .chart-explanation {
-      font-size: 16px;
     }
 
     .control-label,
@@ -1858,21 +1826,6 @@
 
   .chart-heading {
     margin-bottom: 1rem;
-  }
-
-  .chart-explanation {
-    max-width: 940px;
-
-    margin:
-      0.75rem
-      0
-      0;
-
-    color: var(--kf-black);
-
-    font-size: 18px;
-    font-weight: 400;
-    line-height: 1.55;
   }
 
 

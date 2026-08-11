@@ -1144,17 +1144,8 @@
 <section class="dot-plot-stat-4">
   <div class="chart-heading">
     <h2>
-      CLOCKED IN, BUT CHECKED OUT
+      The New Currency Is Certainty
     </h2>
-
-    <p class="chart-explanation">
-      This chart shows employee priorities when
-      joining, staying in or leaving a job. The initial
-      view shows headline insights. Select a segment to
-      compare the first and last available cohorts, or
-      select up to two cohort options to create your own
-      comparison.
-    </p>
   </div>
 
   <div class="sticky-controls">
@@ -1747,6 +1738,8 @@
     font-size: 32px;
     font-weight: 500;
     line-height: 1.15;
+
+    text-transform: uppercase;
   }
 
   .chart-explanation {

@@ -609,20 +609,19 @@
   }
 
   .chart-heading {
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
   }
 
   .chart-heading h2 {
     margin: 0;
 
-    font-size:
-      clamp(
-        1.6rem,
-        4vw,
-        2.5rem
-      );
+    color: #009b77;
 
-    line-height: 1.08;
+    font-size: 32px;
+    font-weight: 500;
+    line-height: 1.15;
+
+    text-transform: uppercase;
   }
 
   .chart-heading p {

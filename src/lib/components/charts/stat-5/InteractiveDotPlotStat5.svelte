@@ -1141,18 +1141,8 @@
 
   <div class="chart-heading">
     <h2>
-      Cost-cutting is Killing Innovation
+      The High Price of Efficiency Drives
     </h2>
-
-    <p class="chart-explanation">
-      This chart shows the levels of agreement with
-      selected statements. The initial view shows the
-      global average, you can then filter to explore
-      different segment groups. Clicking on a cohort
-      will highlight its related values, you can then
-      click to choose to compare responses with another
-      cohort.
-    </p>
   </div>
 
 
