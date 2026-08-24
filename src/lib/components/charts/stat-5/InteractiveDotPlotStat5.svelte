@@ -1140,9 +1140,9 @@
 <section class="dot-plot-stat-1">
 
   <div class="chart-heading">
-    <h2>
+    <!-- <h2>
       The High Price of Efficiency Drives
-    </h2>
+    </h2> -->
   </div>
 
 

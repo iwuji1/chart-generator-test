@@ -1143,9 +1143,9 @@
 
 <section class="dot-plot-stat-4">
   <div class="chart-heading">
-    <h2>
+    <!-- <h2>
       The New Currency Is Certainty
-    </h2>
+    </h2> -->
   </div>
 
   <div class="sticky-controls">

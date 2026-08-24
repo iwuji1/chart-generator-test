@@ -358,9 +358,9 @@
   class="motivation-chart"
 >
   <div class="chart-heading">
-    <h2>
+    <!-- <h2>
       The (Employee) Motivation Dip No One Saw Coming
-    </h2>
+    </h2> -->
   </div>
 
   <div class="controls">

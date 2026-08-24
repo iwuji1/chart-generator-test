@@ -1140,9 +1140,9 @@
 <section class="dot-plot-stat-1">
 
   <div class="chart-heading">
-    <h2>
+    <!-- <h2>
       The Business Backbone is Breaking
-    </h2>
+    </h2> -->
   </div>
 
 
