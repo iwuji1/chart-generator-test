@@ -695,40 +695,62 @@
     hoveredPoint = null;
   }
 
-  function getDefaultComparison(
-    segment
+function getDefaultComparison(
+  segment
+) {
+  const availableCohorts =
+    segmentOptions[segment] ?? [];
+
+  /*
+   * Country opens as:
+   * Brazil vs Global Average
+   */
+  if (
+    segment === 'País' &&
+    availableCohorts.includes(
+      'Brasil'
+    ) &&
+    availableCohorts.includes(
+      'AVERAGE'
+    )
   ) {
-    const availableCohorts =
-      segmentOptions[segment] ?? [];
-
-    const comparableCohorts =
-      availableCohorts.filter(
-        (cohort) =>
-          cohort !== 'Average' &&
-          cohort !== 'AVERAGE'
-      );
-
-    if (
-      comparableCohorts.length === 0
-    ) {
-      return [];
-    }
-
-    if (
-      comparableCohorts.length === 1
-    ) {
-      return [
-        comparableCohorts[0]
-      ];
-    }
-
     return [
-      comparableCohorts[0],
-      comparableCohorts[
-        comparableCohorts.length - 1
-      ]
+      'Brasil',
+      'AVERAGE'
     ];
   }
+
+  /*
+   * Keep the existing default behaviour
+   * for every other segment.
+   */
+  const comparableCohorts =
+    availableCohorts.filter(
+      (cohort) =>
+        cohort !== 'AVERAGE'
+    );
+
+  if (
+    comparableCohorts.length === 0
+  ) {
+    return [];
+  }
+
+  if (
+    comparableCohorts.length === 1
+  ) {
+    return [
+      comparableCohorts[0]
+    ];
+  }
+
+  return [
+    comparableCohorts[0],
+    comparableCohorts[
+      comparableCohorts.length - 1
+    ]
+  ];
+}
 
   function selectSegment(
     segment
