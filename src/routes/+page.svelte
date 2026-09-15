@@ -7,6 +7,12 @@
   import Stat5 from '$lib/components/charts/stat-5/InteractiveDotPlotStat5.svelte';
   import Stat6 from '$lib/components/charts/stat-6/InteractiveDotPlotStat6.svelte';
   import StatMotivation from '$lib/components/charts/stat-motivation/InteractiveMotivationChart.svelte'
+  import Stat1SP from '$lib/components/charts/stat-1-pt/InteractiveDotPlotStat1.svelte'
+  import Stat2SP from '$lib/components/charts/stat-2-pt/InteractiveDotPlotStat2.svelte'
+  import Stat3SP from '$lib/components/charts/stat-3-pt/InteractiveDotPlotStat3.svelte'
+  import Stat4SP from '$lib/components/charts/stat-4-pt/InteractiveDotPlotStat4.svelte'
+  import Stat5SP from '$lib/components/charts/stat-5-pt/InteractiveDotPlotStat5.svelte'
+  import Stat6SP from '$lib/components/charts/stat-6-pt/InteractiveDotPlotStat6.svelte'
 
   const charts = [
     {
@@ -39,11 +45,46 @@
     }
   ];
 
+  const charts_pt = [
+    {
+      title: 'Stat 1 Portuguese',
+      chart: Stat1SP
+    },
+    {
+      title: 'Stat 2 Portuguese',
+      chart: Stat2SP
+    },
+    {
+      title: 'Stat 3 Portuguese',
+      chart: Stat3SP
+    },
+    {
+      title: 'Stat 4 Portuguese',
+      chart: Stat4SP
+    },
+    {
+      title: 'Stat 5 Portuguese',
+      chart: Stat5SP
+    },
+    {
+      title: 'Stat 6 Portuguese',
+      chart: Stat6SP
+    }
+  ];
+
   let activeChartIndex = $state(0);
+
+  let activeChartIndex_pt = $state(0);
 
   const activeChart = $derived(
     charts[activeChartIndex]
   );
+
+  const activeChart_pt = $derived(
+    charts_pt[activeChartIndex_pt]
+  );
+
+
 </script>
 
 <main>
@@ -75,6 +116,7 @@
           }
           onclick={() => {
             activeChartIndex = index;
+            activeChartIndex_pt = index;
           }}
         >
           {item.title}
@@ -88,6 +130,7 @@
     role="tabpanel"
   >
     <activeChart.chart />
+    <activeChart_pt.chart />
   </section>
 
   <!-- <section class="wide-chart">
