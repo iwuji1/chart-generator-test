@@ -15,10 +15,25 @@ import path
 const stat =
   process.env.KF_STAT ?? '1';
 
+const locale =
+  process.env.KF_LOCALE ?? 'en';
+
+/*
+ * English:
+ * src/embeds/stat1.js
+ *
+ * Portuguese:
+ * src/embeds/stat1_pt.js
+ */
+const localeSuffix =
+  locale === 'pt'
+    ? '_pt'
+    : '';
+
 const entry =
   path.resolve(
     process.cwd(),
-    `src/embeds/stat${stat}.js`
+    `src/embeds/stat${stat}${localeSuffix}.js`
   );
 
 export default defineConfig({
@@ -42,8 +57,7 @@ export default defineConfig({
       'static/charts',
 
     /*
-     * Don't delete Stat 1 when
-     * building Stat 2 etc.
+     * Keep previously built charts.
      */
     emptyOutDir: false,
 
@@ -55,14 +69,18 @@ export default defineConfig({
       entry,
 
       name:
-        `KFStat${stat}`,
+        `KFStat${stat}${
+          locale === 'pt'
+            ? 'Pt'
+            : ''
+        }`,
 
       formats: [
         'iife'
       ],
 
       fileName: () =>
-        `stat-${stat}.js`
+        `stat-${stat}${localeSuffix}.js`
     },
 
     rollupOptions: {

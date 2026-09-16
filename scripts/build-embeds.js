@@ -26,6 +26,10 @@ const outputDirectory =
   );
 
 const charts = [
+  // -------------------------
+  // English
+  // -------------------------
+
   {
     name: 'stat1',
     entry:
@@ -60,6 +64,41 @@ const charts = [
     name: 'statmotivation',
     entry:
       'src/embeds/statMotivation.js'
+  },
+
+  // -------------------------
+  // Portuguese
+  // -------------------------
+
+  {
+    name: 'stat1_pt',
+    entry:
+      'src/embeds/stat1_pt.js'
+  },
+  {
+    name: 'stat2_pt',
+    entry:
+      'src/embeds/stat2_pt.js'
+  },
+  {
+    name: 'stat3_pt',
+    entry:
+      'src/embeds/stat3_pt.js'
+  },
+  {
+    name: 'stat4_pt',
+    entry:
+      'src/embeds/stat4_pt.js'
+  },
+  {
+    name: 'stat5_pt',
+    entry:
+      'src/embeds/stat5_pt.js'
+  },
+  {
+    name: 'stat6_pt',
+    entry:
+      'src/embeds/stat6_pt.js'
   }
 ];
 
