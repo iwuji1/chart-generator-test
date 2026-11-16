@@ -99,6 +99,40 @@ const charts = [
     name: 'stat6_pt',
     entry:
       'src/embeds/stat6_pt.js'
+  },
+  // -------------------------
+  // Portuguese
+  // -------------------------
+
+  {
+    name: 'stat1_jp',
+    entry:
+      'src/embeds/stat1_jp.js'
+  },
+  {
+    name: 'stat2_jp',
+    entry:
+      'src/embeds/stat2_jp.js'
+  },
+  {
+    name: 'stat3_jp',
+    entry:
+      'src/embeds/stat3_jp.js'
+  },
+  {
+    name: 'stat4_jp',
+    entry:
+      'src/embeds/stat4_jp.js'
+  },
+  {
+    name: 'stat5_jp',
+    entry:
+      'src/embeds/stat5_jp.js'
+  },
+  {
+    name: 'stat6_jp',
+    entry:
+      'src/embeds/stat6_jp.js'
   }
 ];
 

@@ -7,12 +7,20 @@
   import Stat5 from '$lib/components/charts/stat-5/InteractiveDotPlotStat5.svelte';
   import Stat6 from '$lib/components/charts/stat-6/InteractiveDotPlotStat6.svelte';
   import StatMotivation from '$lib/components/charts/stat-motivation/InteractiveMotivationChart.svelte'
+
   import Stat1SP from '$lib/components/charts/stat-1-pt/InteractiveDotPlotStat1.svelte'
   import Stat2SP from '$lib/components/charts/stat-2-pt/InteractiveDotPlotStat2.svelte'
   import Stat3SP from '$lib/components/charts/stat-3-pt/InteractiveDotPlotStat3.svelte'
   import Stat4SP from '$lib/components/charts/stat-4-pt/InteractiveDotPlotStat4.svelte'
   import Stat5SP from '$lib/components/charts/stat-5-pt/InteractiveDotPlotStat5.svelte'
   import Stat6SP from '$lib/components/charts/stat-6-pt/InteractiveDotPlotStat6.svelte'
+
+  import Stat1JP from '$lib/components/charts/stat-1-jp/InteractiveDotPlotStat1_v3.svelte'
+  import Stat2JP from '$lib/components/charts/stat-2-jp/InteractiveDotPlotStat2.svelte'
+  import Stat3JP from '$lib/components/charts/stat-3-jp/InteractiveDotPlotStat3.svelte'
+  import Stat4JP from '$lib/components/charts/stat-4-jp/InteractiveDotPlotStat4.svelte'
+  import Stat5JP from '$lib/components/charts/stat-5-jp/InteractiveDotPlotStat5.svelte'
+  import Stat6JP from '$lib/components/charts/stat-6-jp/InteractiveDotPlotStat6.svelte'
 
   const charts = [
     {
@@ -72,9 +80,36 @@
     }
   ];
 
-  let activeChartIndex = $state(0);
+  const charts_jp = [
+    {
+      title: 'Stat 1 Japanese',
+      chart: Stat1JP
+    },
+    {
+      title: 'Stat 2 Japanese',
+      chart: Stat2JP
+    },
+    {
+      title: 'Stat 3 Japanese',
+      chart: Stat3JP
+    },
+    {
+      title: 'Stat 4 Japanese',
+      chart: Stat4JP
+    },
+    {
+      title: 'Stat 5 Japanese',
+      chart: Stat5JP
+    },
+    {
+      title: 'Stat 6 Japanese',
+      chart: Stat6JP
+    }
+  ]
 
+  let activeChartIndex = $state(0);
   let activeChartIndex_pt = $state(0);
+  let activeChartIndex_jp = $state(0);
 
   const activeChart = $derived(
     charts[activeChartIndex]
@@ -83,6 +118,10 @@
   const activeChart_pt = $derived(
     charts_pt[activeChartIndex_pt]
   );
+
+  const activeChart_jp = $derived(
+    charts_jp[activeChartIndex_jp]
+  )
 
 
 </script>
@@ -117,6 +156,7 @@
           onclick={() => {
             activeChartIndex = index;
             activeChartIndex_pt = index;
+            activeChartIndex_jp = index;
           }}
         >
           {item.title}
@@ -131,6 +171,7 @@
   >
     <activeChart.chart />
     <activeChart_pt.chart />
+    <activeChart_jp.chart />
   </section>
 
   <!-- <section class="wide-chart">

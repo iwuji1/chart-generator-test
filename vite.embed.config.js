@@ -18,17 +18,51 @@ const stat =
 const locale =
   process.env.KF_LOCALE ?? 'en';
 
+
+/*
+ * Supported locales:
+ *
+ * en = English
+ * pt = Portuguese
+ * cn = Chinese
+ * jp = Japanese
+ */
+
+const supportedLocales = [
+  'en',
+  'pt',
+  'jp'
+];
+
+if (!supportedLocales.includes(locale)) {
+  throw new Error(
+    `Unsupported locale: ${locale}`
+  );
+}
+
 /*
  * English:
  * src/embeds/stat1.js
  *
  * Portuguese:
  * src/embeds/stat1_pt.js
+ *
+ * Japanese:
+ * src/embeds/stat1_jp.js
  */
+
+
+
 const localeSuffix =
-  locale === 'pt'
-    ? '_pt'
-    : '';
+  locale === 'en'
+    ? ''
+    : `_${locale}`;
+
+const localeName = {
+  en: '',
+  pt: 'Pt',
+  jp: 'Jp'
+};
 
 const entry =
   path.resolve(
@@ -69,11 +103,7 @@ export default defineConfig({
       entry,
 
       name:
-        `KFStat${stat}${
-          locale === 'pt'
-            ? 'Pt'
-            : ''
-        }`,
+        `KFStat${stat}${localeName[locale]}`,
 
       formats: [
         'iife'

@@ -1151,7 +1151,7 @@
 
       <div class="segment-control">
         <p class="control-label">
-          Select view
+          Select View
         </p>
 
         <div

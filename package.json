@@ -30,11 +30,20 @@
 		"build:stat5:pt": "KF_STAT=5 KF_LOCALE=pt vite build --config vite.embed.config.js",
 		"build:stat6:pt": "KF_STAT=6 KF_LOCALE=pt vite build --config vite.embed.config.js",
 
+		"build:stat2:jp": "KF_STAT=2 KF_LOCALE=jp vite build --config vite.embed.config.js",
+		"build:stat1:jp": "KF_STAT=1 KF_LOCALE=jp vite build --config vite.embed.config.js",
+		"build:stat3:jp": "KF_STAT=3 KF_LOCALE=jp vite build --config vite.embed.config.js",
+		"build:stat4:jp": "KF_STAT=4 KF_LOCALE=jp vite build --config vite.embed.config.js",
+		"build:stat5:jp": "KF_STAT=5 KF_LOCALE=jp vite build --config vite.embed.config.js",
+		"build:stat6:jp": "KF_STAT=6 KF_LOCALE=jp vite build --config vite.embed.config.js",
+
 		"build:charts": "npm run build:stat1 && npm run build:stat2 && npm run build:stat3 && npm run build:stat4 && npm run build:stat5 && npm run build:stat6 && npm run build:statmotivation",
 
 		"build:charts:pt": "npm run build:stat1:pt && npm run build:stat2:pt && npm run build:stat3:pt && npm run build:stat4:pt && npm run build:stat5:pt && npm run build:stat6:pt",
 
-		"build:charts:all": "npm run build:charts && npm run build:charts:pt"
+		"build:charts:jp": "npm run build:stat1:jp && npm run build:stat2:jp && npm run build:stat3:jp && npm run build:stat4:jp && npm run build:stat5:jp && npm run build:stat6:jp",
+
+		"build:charts:all": "npm run build:charts && npm run build:charts:pt && npm run build:charts:jp"
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",

@@ -175,7 +175,7 @@ export function formatSubsegmentLabel(
 ) {
 
   if (subsegment === 'AVERAGE') {
-    return 'Global Average';
+    return 'グローバル平均';
   }
 
   if (subsegment === 'Industry - Other') 
