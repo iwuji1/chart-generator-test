@@ -117,7 +117,7 @@
     $derived.by(() => {
       return createLongData(
         sourceData,
-        'Job Level'
+        '職位'
       ).filter(
         (point) =>
           point.cohort ===
